@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // Trigger restart
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -73,7 +73,9 @@ app.use((err, req, res, next) => {
 });
 
 // Socket.io connection handling
-require('./socket/gameSocket')(io);
+// Socket.io connection handling
+require('./socket/poker')(io);
+require('./socket/coinflip')(io);
 
 const PORT = process.env.PORT || 5000;
 

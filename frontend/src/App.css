@@ -1,38 +1,376 @@
 .App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+/* Custom casino theme overrides */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a1a2e;
+  color: #ffffff;
+  /* Changed to pure white for better visibility */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #ffffff !important;
+}
+
+.text-muted {
+  color: #a0a0a0 !important;
+  /* Lighter grey for better contrast on dark bg */
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+  border: none;
+  border-radius: 25px;
+  padding: 10px 30px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+  background: linear-gradient(135deg, #ff6b6b 0%, #e94560 100%);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #00d9a6 0%, #00b894 100%);
+  border: none;
+  border-radius: 25px;
+}
+
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 217, 166, 0.4);
+}
+
+.form-control {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 15px;
+}
+
+.form-control:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #e94560;
+  box-shadow: 0 0 0 0.25rem rgba(233, 69, 96, 0.25);
+  color: #fff;
+}
+
+.form-control::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Cash display */
+.cash-display {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a2e;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Game cards */
+.game-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 25px;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.game-card:hover {
+  transform: translateY(-5px);
+  border-color: #e94560;
+  box-shadow: 0 10px 30px rgba(233, 69, 96, 0.2);
+}
+
+.game-card .game-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+
+/* Navbar custom */
+.navbar-dark {
+  background: rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Alert styling */
+.alert {
+  border-radius: 10px;
+  border: none;
+}
+
+.alert-danger {
+  background: rgba(220, 53, 69, 0.2);
+  color: #ff6b6b;
+}
+
+.alert-success {
+  background: rgba(25, 135, 84, 0.2);
+  color: #00d9a6;
+}
+
+/* Table styling */
+.table {
+  color: #e0e0e0;
+}
+
+.table-dark {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Stats cards */
+.stat-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border-radius: 15px;
+  padding: 20px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ffd700;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.stat-card .stat-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Profile Avatar */
+.avatar-circle {
+  width: 60px;
+  height: 60px;
+  background: #e94560;
+  color: white;
+  border-radius: 50%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.App-link {
-  color: #61dafb;
+/* Modal Overlay */
+.params-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  backdrop-filter: blur(5px);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Modal Content */
+.params-modal {
+  background: #1a2c38;
+  /* Lighter blue-grey */
+  padding: 30px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 400px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+/* Text Colors */
+.text-success {
+  color: #00e701 !important;
+  /* Neon Green */
+}
+
+/* Slots Game Styles */
+
+/* 3x3 Grid Styles */
+.reel-cell {
+  width: 80px;
+  height: 80px;
+  background: #0f212e;
+  border: 2px solid #555;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s;
+  user-select: none;
+}
+
+.middle-row .reel-cell {
+  border-color: #ffd700;
+  /* Gold border for middle row */
+  background: #142838;
+}
+
+.reel-cell.spinning {
+  animation: bounce 0.3s infinite alternate;
+  filter: blur(1px);
+}
+
+/* Coin Flip Animation */
+.coin-container {
+  width: 150px;
+  height: 150px;
+  perspective: 1000px;
+}
+
+.coin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 1s ease-out;
+}
+
+.coin.flipping {
+  animation: flip-spin 0.2s infinite linear;
+}
+
+/* Result States */
+.coin.heads {
+  transform: rotateY(0);
+}
+
+.coin.tails {
+  transform: rotateY(180deg);
+}
+
+.side-a,
+.side-b {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 50%;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+  border: 5px solid #bbb;
+}
+
+.side-a {
+  background: #00e701;
+  /* Heads - Neon Green */
+  background-image: url('logo.svg');
+  /* Optional, or styled with CSS text */
+  background-size: 50%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.side-b {
+  background: #E5E5E5;
+  /* Tails - Silver */
+  transform: rotateY(180deg);
+}
+
+@keyframes flip-spin {
+  0% {
+    transform: rotateY(0);
   }
-  to {
-    transform: rotate(360deg);
+
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+.player-card {
+  transition: all 0.3s;
+  opacity: 0.7;
+}
+
+.player-card.winner-glow {
+  opacity: 1;
+  transform: scale(1.1);
+  text-shadow: 0 0 20px #00e701;
+}
+
+.reels-container {
+  perspective: 1000px;
+}
+
+.reel {
+  width: 100px;
+  height: 120px;
+  background: #0f212e;
+  border: 2px solid #00e701;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s;
+  user-select: none;
+}
+
+.reel.spinning {
+  animation: bounce 0.5s infinite alternate;
+  filter: blur(1px);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.reel.win-glow {
+  box-shadow: 0 0 30px #00e701, inset 0 0 20px #00e701;
+  border-color: #fff;
+  animation: pulse 1s infinite;
+}
+
+.glow-text {
+  text-shadow: 0 0 10px #00e701;
+}
+
+@keyframes bounce {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }

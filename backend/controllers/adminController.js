@@ -214,3 +214,184 @@ exports.getStats = async (req, res) => {
         });
     }
 };
+
+// @desc    Adjust credits (supports positive and negative amounts)
+// @route   POST /api/admin/credit
+exports.adjustCredit = async (req, res) => {
+    try {
+        const { userId, amount, reason } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide userId'
+            });
+        }
+
+        if (amount === undefined || amount === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a non-zero amount'
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Determine transaction type based on amount sign
+        const isAddition = amount > 0;
+        const absAmount = Math.abs(amount);
+        const type = isAddition ? 'admin_grant' : 'admin_deduct';
+
+        // Check sufficient balance for deduction
+        if (!isAddition && user.cash < absAmount) {
+            return res.status(400).json({
+                success: false,
+                message: `Insufficient balance. User has $${user.cash}, cannot deduct $${absAmount}`
+            });
+        }
+
+        // Update balance
+        const newCash = isAddition ? user.cash + absAmount : user.cash - absAmount;
+        user.cash = newCash;
+        await user.save();
+
+        // Create transaction
+        const transaction = await Transaction.create({
+            userId,
+            type,
+            amount: absAmount,
+            balanceAfter: newCash,
+            description: reason || `Admin ${isAddition ? 'credit' : 'debit'} adjustment`,
+            metadata: { adminId: req.user.id, reason }
+        });
+
+        res.json({
+            success: true,
+            message: `Successfully ${isAddition ? 'added' : 'deducted'} $${absAmount} ${isAddition ? 'to' : 'from'} ${user.username}'s account`,
+            user: {
+                id: user._id,
+                username: user.username,
+                newCash: newCash
+            },
+            transaction
+        });
+    } catch (error) {
+        console.error('Adjust credit error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to adjust credits'
+        });
+    }
+};
+
+// @desc    Bulk credit adjustment (multiple users or all)
+// @route   POST /api/admin/bulkcredit
+exports.bulkCredit = async (req, res) => {
+    try {
+        const { userIds, amount, reason } = req.body;
+
+        if (amount === undefined || amount === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a non-zero amount'
+            });
+        }
+
+        if (!userIds) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide userIds array or "all"'
+            });
+        }
+
+        let targetUsers;
+
+        if (userIds === 'all') {
+            // Get all active users
+            targetUsers = await User.find({ isActive: true });
+        } else if (Array.isArray(userIds)) {
+            targetUsers = await User.find({ _id: { $in: userIds } });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'userIds must be an array or "all"'
+            });
+        }
+
+        if (targetUsers.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No users found'
+            });
+        }
+
+        const isAddition = amount > 0;
+        const absAmount = Math.abs(amount);
+        const type = isAddition ? 'admin_grant' : 'admin_deduct';
+
+        const results = [];
+        const errors = [];
+
+        for (const user of targetUsers) {
+            try {
+                // Check sufficient balance for deduction
+                if (!isAddition && user.cash < absAmount) {
+                    errors.push({
+                        userId: user._id,
+                        username: user.username,
+                        error: `Insufficient balance ($${user.cash})`
+                    });
+                    continue;
+                }
+
+                // Update balance
+                const newCash = isAddition ? user.cash + absAmount : user.cash - absAmount;
+                user.cash = newCash;
+                await user.save();
+
+                // Create transaction
+                await Transaction.create({
+                    userId: user._id,
+                    type,
+                    amount: absAmount,
+                    balanceAfter: newCash,
+                    description: reason || `Bulk admin ${isAddition ? 'credit' : 'debit'}`,
+                    metadata: { adminId: req.user.id, reason, bulkOperation: true }
+                });
+
+                results.push({
+                    userId: user._id,
+                    username: user.username,
+                    newCash
+                });
+            } catch (err) {
+                errors.push({
+                    userId: user._id,
+                    username: user.username,
+                    error: err.message
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Bulk operation completed. ${results.length} users updated, ${errors.length} errors.`,
+            amount: isAddition ? absAmount : -absAmount,
+            updated: results,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        console.error('Bulk credit error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to process bulk credits'
+        });
+    }
+};
+

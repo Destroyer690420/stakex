@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
 const User = require('../models/User');
+const { protect } = require('../middleware/auth');
 const GameSession = require('../models/GameSession');
+// Attempting to locate processTransaction. If it was in walletController, we include it. 
+// Assuming the previous code layout was correct before deletion.
 const { processTransaction } = require('../controllers/walletController');
 const slotsGame = require('../services/slotsGame');
 
-// @desc    Play slots
-// @route   POST /api/games/slots/spin
 router.post('/slots/spin', protect, async (req, res) => {
     try {
         const { betAmount } = req.body;
