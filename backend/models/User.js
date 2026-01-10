@@ -23,29 +23,18 @@ const userSchema = new mongoose.Schema({
         minlength: [6, 'Password must be at least 6 characters'],
         select: false
     },
+    cash: {
+        type: Number,
+        default: 1000, // Starting bonus cash
+        min: 0
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
     avatar: {
         type: String,
         default: 'default-avatar.png'
-    },
-    role: {
-        type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
-    },
-    wallet: {
-        balance: {
-            type: Number,
-            default: 1000, // Starting bonus cash
-            min: 0
-        },
-        lifetimeEarnings: {
-            type: Number,
-            default: 0
-        },
-        lifetimeLosses: {
-            type: Number,
-            default: 0
-        }
     },
     stats: {
         gamesPlayed: {
@@ -63,6 +52,14 @@ const userSchema = new mongoose.Schema({
         biggestWin: {
             type: Number,
             default: 0
+        },
+        lifetimeEarnings: {
+            type: Number,
+            default: 0
+        },
+        lifetimeLosses: {
+            type: Number,
+            default: 0
         }
     },
     isActive: {
@@ -78,13 +75,12 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        return next();
+        return;
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    next();
 });
 
 // Compare password method
@@ -98,9 +94,9 @@ userSchema.methods.toPublicProfile = function () {
         id: this._id,
         username: this.username,
         email: this.email,
+        cash: this.cash,
+        isAdmin: this.isAdmin,
         avatar: this.avatar,
-        role: this.role,
-        wallet: this.wallet,
         stats: this.stats,
         createdAt: this.createdAt,
         lastLogin: this.lastLogin

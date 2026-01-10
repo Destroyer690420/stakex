@@ -21,7 +21,7 @@ router.post('/slots/spin', protect, async (req, res) => {
             });
         }
 
-        if (betAmount > user.wallet.balance) {
+        if (betAmount > user.cash) {
             return res.status(400).json({
                 success: false,
                 message: 'Insufficient balance'
@@ -73,8 +73,8 @@ router.post('/slots/spin', protect, async (req, res) => {
             players: [{
                 userId: req.user.id,
                 username: user.username,
-                initialChips: user.wallet.balance + betAmount,
-                finalChips: spinResult.won ? user.wallet.balance + spinResult.payout : user.wallet.balance,
+                initialChips: user.cash + betAmount,
+                finalChips: spinResult.won ? user.cash + spinResult.payout : user.cash,
                 profit: spinResult.netResult
             }],
             status: 'completed',
@@ -101,7 +101,7 @@ router.post('/slots/spin', protect, async (req, res) => {
                 betAmount: spinResult.betAmount,
                 payout: spinResult.payout
             },
-            newBalance: updatedUser.wallet.balance
+            newCash: updatedUser.cash
         });
     } catch (error) {
         console.error('Slots error:', error);

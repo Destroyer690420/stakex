@@ -65,7 +65,7 @@ router.get('/stats', protect, async (req, res) => {
         res.json({
             success: true,
             stats: user.stats,
-            wallet: user.wallet
+            cash: user.cash
         });
     } catch (error) {
         res.status(500).json({

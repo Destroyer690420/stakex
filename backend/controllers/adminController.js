@@ -74,7 +74,7 @@ exports.getUser = async (req, res) => {
     }
 };
 
-// @desc    Assign credits to user
+// @desc    Assign credits (cash) to user
 // @route   POST /api/admin/users/:id/credits
 exports.assignCredits = async (req, res) => {
     try {
@@ -98,7 +98,7 @@ exports.assignCredits = async (req, res) => {
         res.json({
             success: true,
             message: `Successfully added $${amount} to ${user.username}'s account`,
-            newBalance,
+            newCash: newBalance,
             transaction
         });
     } catch (error) {
@@ -109,7 +109,7 @@ exports.assignCredits = async (req, res) => {
     }
 };
 
-// @desc    Deduct credits from user
+// @desc    Deduct credits (cash) from user
 // @route   POST /api/admin/users/:id/deduct
 exports.deductCredits = async (req, res) => {
     try {
@@ -133,7 +133,7 @@ exports.deductCredits = async (req, res) => {
         res.json({
             success: true,
             message: `Successfully deducted $${amount} from ${user.username}'s account`,
-            newBalance,
+            newCash: newBalance,
             transaction
         });
     } catch (error) {
@@ -180,12 +180,12 @@ exports.getStats = async (req, res) => {
         const totalUsers = await User.countDocuments();
         const activeUsers = await User.countDocuments({ isActive: true });
 
-        const walletStats = await User.aggregate([
+        const cashStats = await User.aggregate([
             {
                 $group: {
                     _id: null,
-                    totalBalance: { $sum: '$wallet.balance' },
-                    avgBalance: { $avg: '$wallet.balance' }
+                    totalCash: { $sum: '$cash' },
+                    avgCash: { $avg: '$cash' }
                 }
             }
         ]);
@@ -203,8 +203,8 @@ exports.getStats = async (req, res) => {
                 totalUsers,
                 activeUsers,
                 newUsersToday,
-                totalCreditsInCirculation: walletStats[0]?.totalBalance || 0,
-                averageBalance: Math.round(walletStats[0]?.avgBalance || 0)
+                totalCashInCirculation: cashStats[0]?.totalCash || 0,
+                averageCash: Math.round(cashStats[0]?.avgCash || 0)
             }
         });
     } catch (error) {

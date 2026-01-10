@@ -1,14 +1,15 @@
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 
-// @desc    Get wallet balance
+// @desc    Get wallet balance (cash)
 // @route   GET /api/wallet/balance
 exports.getBalance = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         res.json({
             success: true,
-            wallet: user.wallet
+            cash: user.cash,
+            stats: user.stats
         });
     } catch (error) {
         res.status(500).json({
@@ -60,28 +61,28 @@ exports.processTransaction = async (userId, type, amount, description, metadata 
     }
 
     // Calculate new balance
-    let newBalance = user.wallet.balance;
+    let newBalance = user.cash;
 
     if (['credit', 'admin_grant', 'game_win', 'bonus'].includes(type)) {
         newBalance += amount;
         if (type === 'game_win') {
-            user.wallet.lifetimeEarnings += amount;
+            user.stats.lifetimeEarnings += amount;
             if (amount > user.stats.biggestWin) {
                 user.stats.biggestWin = amount;
             }
         }
     } else if (['debit', 'admin_deduct', 'game_loss'].includes(type)) {
-        if (user.wallet.balance < amount) {
+        if (user.cash < amount) {
             throw new Error('Insufficient balance');
         }
         newBalance -= amount;
         if (type === 'game_loss') {
-            user.wallet.lifetimeLosses += amount;
+            user.stats.lifetimeLosses += amount;
         }
     }
 
     // Update user balance
-    user.wallet.balance = newBalance;
+    user.cash = newBalance;
     await user.save();
 
     // Create transaction record

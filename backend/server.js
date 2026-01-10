@@ -13,6 +13,7 @@ const userRoutes = require('./routes/user');
 const walletRoutes = require('./routes/wallet');
 const adminRoutes = require('./routes/admin');
 const gameRoutes = require('./routes/games');
+const testRoutes = require('./routes/test');
 
 const app = express();
 const server = http.createServer(app);
@@ -49,6 +50,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api/testusers', testRoutes);
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend initialized' });
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -58,7 +65,7 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     success: false,
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
