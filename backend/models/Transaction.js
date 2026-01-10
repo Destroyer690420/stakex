@@ -9,7 +9,7 @@ const transactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['credit', 'debit', 'admin_grant', 'admin_deduct', 'game_win', 'game_loss', 'bonus'],
+        enum: ['credit', 'debit', 'admin_grant', 'admin_deduct', 'game_win', 'game_loss', 'bonus', 'bet', 'win', 'loss'],
         required: true
     },
     amount: {

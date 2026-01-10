@@ -69,6 +69,10 @@ const userSchema = new mongoose.Schema({
     lastLogin: {
         type: Date,
         default: Date.now
+    },
+    lastBonusClaim: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
@@ -99,7 +103,8 @@ userSchema.methods.toPublicProfile = function () {
         avatar: this.avatar,
         stats: this.stats,
         createdAt: this.createdAt,
-        lastLogin: this.lastLogin
+        lastLogin: this.lastLogin,
+        lastBonusClaim: this.lastBonusClaim
     };
 };
 
