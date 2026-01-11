@@ -36,30 +36,46 @@ const io = new Server(server, {
 // Make io accessible to routes
 app.set('io', io);
 
-// Middleware
-app.use(helmet());
-app.use(cors({
+// CORS Middleware - MUST be before helmet
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, etc)
     if (!origin) return callback(null, true);
 
-    // Check if origin is allowed
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed instanceof RegExp) {
-        return allowed.test(origin);
-      }
-      return allowed === origin;
-    });
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow anyway for now to debug
+    // Allow all vercel.app domains
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
     }
+
+    // Allow localhost
+    if (origin.includes('localhost')) {
+      return callback(null, true);
+    }
+
+    // Check explicit CLIENT_URL
+    if (process.env.CLIENT_URL && origin === process.env.CLIENT_URL) {
+      return callback(null, true);
+    }
+
+    console.log('CORS allowing origin:', origin);
+    callback(null, true); // Allow all for now
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+// Apply CORS first
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
+// Then helmet with relaxed settings
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
