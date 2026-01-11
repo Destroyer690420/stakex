@@ -19,10 +19,17 @@ const app = express();
 const server = http.createServer(app);
 
 // Socket.io setup
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.CLIENT_URL,
+  /\.vercel\.app$/  // Allow all Vercel preview URLs
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -32,7 +39,25 @@ app.set('io', io);
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return allowed === origin;
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Allow anyway for now to debug
+    }
+  },
   credentials: true
 }));
 app.use(morgan('dev'));
