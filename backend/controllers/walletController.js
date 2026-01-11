@@ -1,14 +1,20 @@
-const User = require('../models/User');
-const Transaction = require('../models/Transaction');
+const { supabaseAdmin } = require('../config/supabase');
 
 // @desc    Get wallet balance (cash)
 // @route   GET /api/wallet/balance
 exports.getBalance = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('cash, stats')
+            .eq('id', req.user.id)
+            .single();
+
+        if (error) throw error;
+
         res.json({
             success: true,
-            cash: user.cash,
+            cash: parseFloat(user.cash),
             stats: user.stats
         });
     } catch (error) {
@@ -25,14 +31,16 @@ exports.getTransactions = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
-        const skip = (page - 1) * limit;
+        const offset = (page - 1) * limit;
 
-        const transactions = await Transaction.find({ userId: req.user.id })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        const { data: transactions, error, count } = await supabaseAdmin
+            .from('transactions')
+            .select('*', { count: 'exact' })
+            .eq('user_id', req.user.id)
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
-        const total = await Transaction.countDocuments({ userId: req.user.id });
+        if (error) throw error;
 
         res.json({
             success: true,
@@ -40,8 +48,8 @@ exports.getTransactions = async (req, res) => {
             pagination: {
                 page,
                 limit,
-                total,
-                pages: Math.ceil(total / limit)
+                total: count,
+                pages: Math.ceil(count / limit)
             }
         });
     } catch (error) {
@@ -52,48 +60,30 @@ exports.getTransactions = async (req, res) => {
     }
 };
 
-// Internal function to process wallet transactions
+// Internal function to process wallet transactions (used by games and admin)
 exports.processTransaction = async (userId, type, amount, description, metadata = {}) => {
-    const user = await User.findById(userId);
-
-    if (!user) {
-        throw new Error('User not found');
-    }
-
-    // Calculate new balance
-    let newBalance = user.cash;
-
-    if (['credit', 'admin_grant', 'game_win', 'bonus'].includes(type)) {
-        newBalance += amount;
-        if (type === 'game_win') {
-            user.stats.lifetimeEarnings += amount;
-            if (amount > user.stats.biggestWin) {
-                user.stats.biggestWin = amount;
-            }
-        }
-    } else if (['debit', 'admin_deduct', 'game_loss'].includes(type)) {
-        if (user.cash < amount) {
-            throw new Error('Insufficient balance');
-        }
-        newBalance -= amount;
-        if (type === 'game_loss') {
-            user.stats.lifetimeLosses += amount;
-        }
-    }
-
-    // Update user balance
-    user.cash = newBalance;
-    await user.save();
-
-    // Create transaction record
-    const transaction = await Transaction.create({
-        userId,
-        type,
-        amount,
-        balanceAfter: newBalance,
-        description,
-        metadata
+    const { data, error } = await supabaseAdmin.rpc('process_transaction', {
+        p_user_id: userId,
+        p_type: type,
+        p_amount: amount,
+        p_description: description,
+        p_metadata: metadata
     });
 
-    return { transaction, newBalance, user };
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    // Get updated user
+    const { data: user } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    return {
+        transaction: { id: data[0].transaction_id },
+        newBalance: parseFloat(data[0].new_balance),
+        user
+    };
 };

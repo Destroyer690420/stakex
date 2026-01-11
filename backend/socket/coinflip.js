@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 const { processTransaction } = require('../controllers/walletController');
 
 // Constants
@@ -50,45 +51,57 @@ module.exports = (io) => {
         const totalWinningBetAmount = winningBets.reduce((sum, b) => sum + b.amount, 0);
         const totalLosingBetAmount = losingBets.reduce((sum, b) => sum + b.amount, 0);
 
-        // Simple House Edge logic (optional, for now 100% payout of loser pool to winners? 
-        // Or standard casino: You bet 10, you win 20 (2x) if correct.
-        // If we do House vs Player: infinite liquidity needed.
-        // If PvP Pool: Winners split the Loser Pool + their own bets.
-        // Let's go with "The House" takes the risk (Casino style) for simplicity in MVP 
-        // OR Pool style. Description says "winners split pot (minus optional house edge)".
-        // Let's do Pool Style: 
-        // Total Pot = All Bets. 
-        // Winners get (Total Pot * (TheirBet / TotalWinningBets)) * (1 - HouseEdge).
-
+        // Pool Style with House Edge
         const HOUSE_EDGE_PERCENT = 0.05; // 5%
         const totalPot = gameState.stats.totalPot;
         const distributablePot = totalPot * (1 - HOUSE_EDGE_PERCENT);
 
         // Process Winners
+        const winnerPayouts = [];
         for (const bet of winningBets) {
             let winAmount = 0;
             if (totalWinningBetAmount > 0) {
                 const share = bet.amount / totalWinningBetAmount;
                 winAmount = share * distributablePot;
-            } else {
-                // Edge case: No winners, house takes all? Or refund?
-                // Usually house takes all if no one wins.
             }
 
-            // Allow integer transaction for cleanliness? Or keep float?
-            // Helper supports float? Wallet usually float.
             winAmount = Math.floor(winAmount * 100) / 100;
 
             if (winAmount > 0) {
                 try {
-                    await processTransaction(bet.userId, 'game_win', winAmount, `CoinFlip Win (${result})`);
+                    await processTransaction(bet.userId, 'game_win', winAmount, `CoinFlip Win (${result})`, { gameType: 'coinflip' });
+                    winnerPayouts.push({ userId: bet.userId, amount: winAmount });
                 } catch (err) {
                     console.error(`Failed to payout user ${bet.userId}:`, err);
                 }
             }
         }
 
-        // No need to process losers, they already paid 'game_loss' at bet time.
+        // Emit payout event to all clients so winners can refresh their balance
+        coinflipNamespace.emit('roundResult', {
+            outcome: result,
+            winners: winnerPayouts
+        });
+
+        // Save game session to database
+        try {
+            await supabaseAdmin.from('game_sessions').insert({
+                game_type: 'coinflip',
+                room_id: gameState.roundId,
+                players: gameState.bets.map(b => ({
+                    userId: b.userId,
+                    username: b.username,
+                    side: b.side,
+                    amount: b.amount
+                })),
+                status: 'completed',
+                result: { outcome: result, totalPot, winningBets: winningBets.length },
+                bets: gameState.bets,
+                ended_at: new Date().toISOString()
+            });
+        } catch (err) {
+            console.error('Failed to save coinflip session:', err);
+        }
 
         broadcastState();
     };
@@ -102,7 +115,7 @@ module.exports = (io) => {
                 if (gameState.status === 'betting') {
                     gameState.status = 'flipping';
                     gameState.timeLeft = FLIP_TIME;
-                    await processGameResult(); // Determine result now, but show it after animation
+                    await processGameResult();
                 } else if (gameState.status === 'flipping') {
                     gameState.status = 'result';
                     gameState.timeLeft = RESULT_TIME;
@@ -111,9 +124,6 @@ module.exports = (io) => {
                 }
                 broadcastState();
             } else {
-                // Optimize: Don't emit every second if not needed, but for timer we usually do.
-                // To save bandwidth, clients can predict time, but syncing is safer.
-                // Let's emit every second for MVP.
                 broadcastState();
             }
         }, 1000);
@@ -126,7 +136,6 @@ module.exports = (io) => {
         socket.emit('gameState', gameState);
 
         socket.on('join_check', () => {
-            // Just a ping to ensure they get state
             socket.emit('gameState', gameState);
         });
 
@@ -135,14 +144,15 @@ module.exports = (io) => {
                 return socket.emit('error', { message: 'Betting is closed for this round' });
             }
 
+            if (!userId) {
+                return socket.emit('error', { message: 'Authentication required' });
+            }
+
             if (amount <= 0) return socket.emit('error', { message: 'Invalid amount' });
 
             // Deduct balance immediately
             try {
-                // Check if already bet? (Optional: allow multiple bets)
-                // Let's allow multiple bets.
-
-                await processTransaction(userId, 'game_loss', amount, `CoinFlip Bet (${side})`);
+                await processTransaction(userId, 'game_loss', amount, `CoinFlip Bet (${side})`, { gameType: 'coinflip' });
 
                 // Add to game state
                 gameState.bets.push({ userId, username, amount, side, avatar: 'default' });
@@ -151,7 +161,7 @@ module.exports = (io) => {
                 gameState.stats[side] += amount;
                 gameState.stats.totalPot += amount;
 
-                // Broadcast update immediately so others see the bet
+                // Broadcast update
                 broadcastState();
 
                 socket.emit('betConfirmed', { amount, side });

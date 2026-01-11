@@ -1,5 +1,4 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 const { processTransaction } = require('../controllers/walletController');
 
 // Poker game rooms
@@ -27,7 +26,6 @@ const evaluateHand = (communityCards, playerHand) => {
 
     // Check Straight Flush
     if (flushSuit && straightHigh) {
-        // Must check if the straight is in the flush suit
         const flushCards = allCards.filter(c => c.suit === flushSuit);
         const sfHigh = getStraightHigh(flushCards);
         if (sfHigh) return { rank: 8, value: sfHigh, name: 'Straight Flush' };
@@ -48,7 +46,6 @@ const evaluateHand = (communityCards, playerHand) => {
     }
 
     if (flushSuit) {
-        // Get high card of flush
         const flushCards = allCards.filter(c => c.suit === flushSuit);
         return { rank: 5, value: getCardValue(flushCards[0]), name: 'Flush' };
     }
@@ -83,7 +80,7 @@ const getStraightHigh = (cards) => {
     for (let i = 0; i < uniqueValues.length - 1; i++) {
         if (uniqueValues[i] - uniqueValues[i + 1] === 1) {
             streak++;
-            if (streak >= 4) return uniqueValues[i - 3]; // Top of sequence
+            if (streak >= 4) return uniqueValues[i - 3];
         } else {
             streak = 0;
         }
@@ -139,8 +136,19 @@ const authenticateSocket = async (socket) => {
     try {
         const token = socket.handshake.auth.token;
         if (!token) return null;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        return await User.findById(decoded.id);
+
+        // Verify with Supabase
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) return null;
+
+        // Get user profile
+        const { data: profile } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        return profile;
     } catch (error) {
         return null;
     }
@@ -153,10 +161,6 @@ module.exports = (io) => {
         console.log('🎰 Poker connection:', socket.id);
 
         const user = await authenticateSocket(socket);
-        // Allow unauth for testing? No, require auth for wallet.
-        if (!user && !socket.handshake.query.test) { // backdoor for quick connect if needed
-            // but logic needs user id.
-        }
 
         if (user) {
             socket.user = user;
@@ -166,15 +170,20 @@ module.exports = (io) => {
         socket.on('joinRoom', async ({ roomId, buyInAmount }) => {
             if (!socket.user) return socket.emit('error', { message: 'Auth required' });
 
-            // Validate Buy-in
-            if (socket.user.cash < buyInAmount) {
+            // Get fresh balance
+            const { data: currentUser } = await supabaseAdmin
+                .from('users')
+                .select('cash')
+                .eq('id', socket.user.id)
+                .single();
+
+            if (parseFloat(currentUser.cash) < buyInAmount) {
                 return socket.emit('error', { message: 'Insufficient funds for buy-in' });
             }
 
             let room = pokerRooms.get(roomId);
             if (!room) {
-                // Auto-create room if not exists (or could require createRoom)
-                room = createRoom(roomId, 50); // Default minBet 50
+                room = createRoom(roomId, 50);
                 pokerRooms.set(roomId, room);
             }
 
@@ -188,7 +197,7 @@ module.exports = (io) => {
 
             // Deduct Buy-in
             try {
-                await processTransaction(socket.user.id, 'game_loss', buyInAmount, 'Poker Buy-in');
+                await processTransaction(socket.user.id, 'game_loss', buyInAmount, 'Poker Buy-in', { gameType: 'poker' });
             } catch (err) {
                 return socket.emit('error', { message: 'Transaction failed' });
             }
@@ -201,7 +210,7 @@ module.exports = (io) => {
                 hand: [],
                 bet: 0,
                 folded: false,
-                isReady: false, // Wait for next hand
+                isReady: false,
                 seatIndex: room.players.length
             };
 
@@ -211,14 +220,12 @@ module.exports = (io) => {
 
             // Notify room
             pokerNamespace.to(roomId).emit('roomUpdate', {
-                players: room.players.map(p => ({ ...p, hand: null })), // Hide hands
+                players: room.players.map(p => ({ ...p, hand: null })),
                 pot: room.pot,
                 phase: room.phase,
                 communityCards: room.communityCards
             });
 
-            // If enough players and waiting, start? 
-            // Better: Manual Ready or Auto start if > 1 player
             if (room.players.length >= 2 && room.phase === 'waiting') {
                 startGame(room);
             }
@@ -272,7 +279,7 @@ module.exports = (io) => {
         // Cash out
         if (player.chips > 0) {
             try {
-                await processTransaction(player.id, 'game_win', player.chips, 'Poker Cash-out');
+                await processTransaction(player.id, 'game_win', player.chips, 'Poker Cash-out', { gameType: 'poker' });
             } catch (e) {
                 console.error("Cashout failed", e);
             }
@@ -282,10 +289,8 @@ module.exports = (io) => {
 
         // Handle active game interruption
         if (room.phase !== 'waiting') {
-            // Fold them
-            // If fewer than 2 players left, end hand
             if (room.players.filter(p => !p.folded).length < 2) {
-                endHand(room, null); // Winner determination logic handles single player
+                endHand(room, null);
             }
         }
 
@@ -305,30 +310,25 @@ module.exports = (io) => {
         room.pot = 0;
         room.currentBet = room.minBet;
 
-        // Active players (chips > 0)
         const activePlayers = room.players.filter(p => p.chips > 0);
         if (activePlayers.length < 2) {
             room.phase = 'waiting';
             return;
         }
 
-        // Reset
         room.players.forEach(p => {
             p.hand = [];
             p.bet = 0;
             p.folded = p.chips <= 0;
         });
 
-        // Deal
         room.players.forEach(p => {
             if (!p.folded) {
                 p.hand = [room.deck.pop(), room.deck.pop()];
             }
         });
 
-        // Blinds
         room.dealerIndex = (room.dealerIndex + 1) % room.players.length;
-        // Logic for SB/BB could be complex with leaving players, simplified:
         let sbPos = (room.dealerIndex + 1) % room.players.length;
         let bbPos = (room.dealerIndex + 2) % room.players.length;
 
@@ -350,12 +350,10 @@ module.exports = (io) => {
 
         room.currentPlayerIndex = (bbPos + 1) % room.players.length;
 
-        // Emit
         broadcastState(room);
     };
 
     const handleAction = (room, player, action, amount) => {
-        // Logic for Call, Raise, Fold, Check
         if (action === 'fold') {
             player.folded = true;
         } else if (action === 'call') {
@@ -365,37 +363,26 @@ module.exports = (io) => {
             player.bet += actual;
             room.pot += actual;
         } else if (action === 'raise') {
-            // Validations required
-            const totalBet = amount; // Assuming amount is TOTAL bet
+            const totalBet = amount;
             const diff = totalBet - player.bet;
-            if (player.chips >= diff && totalBet >= room.currentBet * 2) { // Min raise 2x
+            if (player.chips >= diff && totalBet >= room.currentBet * 2) {
                 player.chips -= diff;
                 player.bet = totalBet;
                 room.pot += diff;
                 room.currentBet = totalBet;
-                // Reset other players 'acted' state if we had it, 
-                // but here we just cycle until all match bet
             }
         } else if (action === 'check') {
-            if (player.bet < room.currentBet) return; // Cant check
+            if (player.bet < room.currentBet) return;
         }
 
         nextTurn(room);
     };
 
     const nextTurn = (room) => {
-        // Find next non-folded player
-        // Check if round complete
         const active = room.players.filter(p => !p.folded && p.chips > 0);
-        // If 1 left -> WIN
         if (room.players.filter(p => !p.folded).length === 1) {
             return endHand(room);
         }
-
-        // Proper round cycling logic is complex. 
-        // Simplified: Move curIndex. If curIndex == starter and bets equal -> Next Phase.
-        // Need to track who started the aggressive action.
-        // For MVP: Simple loop.
 
         let loops = 0;
         do {
@@ -403,18 +390,8 @@ module.exports = (io) => {
             loops++;
         } while (room.players[room.currentPlayerIndex].folded && loops < 10);
 
-        // Check betting complete condition:
-        // All active players have bet == currentBet (or are all-in)
         const notAllIn = room.players.filter(p => !p.folded && p.chips > 0);
         const betsMatched = notAllIn.every(p => p.bet === room.currentBet);
-
-        // Also ensure everyone had a chance? 
-        // We'll rely on "If we circled back to BB/Raiser and matched" logic.
-        // Let's just track "lastAggressor". 
-        // Simplified: If bets matched and we are at the start of next turn cycle?
-        // Let's just check if betsMatched AND everybody acted. 
-        // Hard to track "everyone acted" without a flag. 
-        // Let's assume if bets matched and current player has bet == currentBet, we proceed.
 
         if (betsMatched && room.players[room.currentPlayerIndex].bet === room.currentBet) {
             nextPhase(room);
@@ -424,8 +401,8 @@ module.exports = (io) => {
     };
 
     const nextPhase = (room) => {
-        room.currentBet = 0; // Reset for next street? Usually yes.
-        room.players.forEach(p => p.bet = 0); // Bets go to pot.
+        room.currentBet = 0;
+        room.players.forEach(p => p.bet = 0);
 
         if (room.phase === 'preflop') {
             room.phase = 'flop';
@@ -442,7 +419,6 @@ module.exports = (io) => {
             return;
         }
 
-        // Reset player index to first after dealer
         room.currentPlayerIndex = (room.dealerIndex + 1) % room.players.length;
         while (room.players[room.currentPlayerIndex].folded) {
             room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
@@ -452,18 +428,15 @@ module.exports = (io) => {
     };
 
     const endHand = (room) => {
-        // Determine winner
         const active = room.players.filter(p => !p.folded);
         let bestPlayer = active[0];
         let bestHand = null;
 
         if (active.length > 1) {
-            // Showdown
             bestHand = evaluateHand(room.communityCards, active[0].hand);
 
             for (let i = 1; i < active.length; i++) {
                 const hand = evaluateHand(room.communityCards, active[i].hand);
-                // Compare (Higher rank better, if same, Higher value)
                 if (hand.rank > bestHand.rank || (hand.rank === bestHand.rank && hand.value > bestHand.value)) {
                     bestPlayer = active[i];
                     bestHand = hand;
@@ -471,7 +444,6 @@ module.exports = (io) => {
             }
         }
 
-        // Award Pot
         bestPlayer.chips += room.pot;
 
         pokerNamespace.to(room.id).emit('handEnded', {
@@ -479,21 +451,18 @@ module.exports = (io) => {
             amount: room.pot,
             handName: bestHand ? bestHand.name : 'Opponents Folded',
             roomState: {
-                players: room.players // Reveal all hands?
+                players: room.players
             }
         });
 
-        // Clear pot
         room.pot = 0;
 
-        // Auto restart
         setTimeout(() => {
             startGame(room);
         }, 5000);
     };
 
     const broadcastState = (room) => {
-        // Send sanitize state (hide other hands)
         room.players.forEach(p => {
             const others = room.players.map(op => ({
                 ...op,

@@ -1,5 +1,4 @@
-const User = require('../models/User');
-const Transaction = require('../models/Transaction');
+const { supabaseAdmin } = require('../config/supabase');
 const { processTransaction } = require('./walletController');
 
 // @desc    Get all users (paginated)
@@ -9,34 +8,34 @@ exports.getUsers = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const search = req.query.search || '';
-        const skip = (page - 1) * limit;
+        const offset = (page - 1) * limit;
 
-        const query = search ? {
-            $or: [
-                { username: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
-            ]
-        } : {};
+        let query = supabaseAdmin
+            .from('users')
+            .select('id, username, email, cash, is_admin, is_active, stats, created_at, last_login', { count: 'exact' });
 
-        const users = await User.find(query)
-            .select('-password')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        if (search) {
+            query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);
+        }
 
-        const total = await User.countDocuments(query);
+        const { data: users, error, count } = await query
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+        if (error) throw error;
 
         res.json({
             success: true,
-            users: users.map(u => u.toPublicProfile()),
+            users,
             pagination: {
                 page,
                 limit,
-                total,
-                pages: Math.ceil(total / limit)
+                total: count,
+                pages: Math.ceil(count / limit)
             }
         });
     } catch (error) {
+        console.error('Get users error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to get users'
@@ -48,25 +47,33 @@ exports.getUsers = async (req, res) => {
 // @route   GET /api/admin/users/:id
 exports.getUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
 
-        if (!user) {
+        if (error || !user) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
         }
 
-        const recentTransactions = await Transaction.find({ userId: user._id })
-            .sort({ createdAt: -1 })
+        const { data: recentTransactions } = await supabaseAdmin
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
             .limit(10);
 
         res.json({
             success: true,
-            user: user.toPublicProfile(),
-            recentTransactions
+            user,
+            recentTransactions: recentTransactions || []
         });
     } catch (error) {
+        console.error('Get user error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to get user'
@@ -102,6 +109,7 @@ exports.assignCredits = async (req, res) => {
             transaction
         });
     } catch (error) {
+        console.error('Assign credits error:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to assign credits'
@@ -137,6 +145,7 @@ exports.deductCredits = async (req, res) => {
             transaction
         });
     } catch (error) {
+        console.error('Deduct credits error:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to deduct credits'
@@ -148,24 +157,35 @@ exports.deductCredits = async (req, res) => {
 // @route   PUT /api/admin/users/:id/status
 exports.toggleUserStatus = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('is_active, username')
+            .eq('id', req.params.id)
+            .single();
 
-        if (!user) {
+        if (error || !user) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
             });
         }
 
-        user.isActive = !user.isActive;
-        await user.save();
+        const newStatus = !user.is_active;
+
+        const { error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({ is_active: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', req.params.id);
+
+        if (updateError) throw updateError;
 
         res.json({
             success: true,
-            message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully`,
-            isActive: user.isActive
+            message: `User ${newStatus ? 'activated' : 'deactivated'} successfully`,
+            isActive: newStatus
         });
     } catch (error) {
+        console.error('Toggle status error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update user status'
@@ -177,37 +197,46 @@ exports.toggleUserStatus = async (req, res) => {
 // @route   GET /api/admin/stats
 exports.getStats = async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments();
-        const activeUsers = await User.countDocuments({ isActive: true });
+        // Total users
+        const { count: totalUsers } = await supabaseAdmin
+            .from('users')
+            .select('*', { count: 'exact', head: true });
 
-        const cashStats = await User.aggregate([
-            {
-                $group: {
-                    _id: null,
-                    totalCash: { $sum: '$cash' },
-                    avgCash: { $avg: '$cash' }
-                }
-            }
-        ]);
+        // Active users
+        const { count: activeUsers } = await supabaseAdmin
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_active', true);
 
+        // New users today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const newUsersToday = await User.countDocuments({
-            createdAt: { $gte: today }
-        });
+        const { count: newUsersToday } = await supabaseAdmin
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', today.toISOString());
+
+        // Cash stats
+        const { data: cashData } = await supabaseAdmin
+            .from('users')
+            .select('cash');
+
+        const totalCash = cashData?.reduce((sum, u) => sum + parseFloat(u.cash), 0) || 0;
+        const avgCash = cashData?.length ? totalCash / cashData.length : 0;
 
         res.json({
             success: true,
             stats: {
-                totalUsers,
-                activeUsers,
-                newUsersToday,
-                totalCashInCirculation: cashStats[0]?.totalCash || 0,
-                averageCash: Math.round(cashStats[0]?.avgCash || 0)
+                totalUsers: totalUsers || 0,
+                activeUsers: activeUsers || 0,
+                newUsersToday: newUsersToday || 0,
+                totalCashInCirculation: totalCash,
+                averageCash: Math.round(avgCash)
             }
         });
     } catch (error) {
+        console.error('Get stats error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to get stats'
@@ -235,49 +264,25 @@ exports.adjustCredit = async (req, res) => {
             });
         }
 
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        // Determine transaction type based on amount sign
         const isAddition = amount > 0;
         const absAmount = Math.abs(amount);
         const type = isAddition ? 'admin_grant' : 'admin_deduct';
 
-        // Check sufficient balance for deduction
-        if (!isAddition && user.cash < absAmount) {
-            return res.status(400).json({
-                success: false,
-                message: `Insufficient balance. User has $${user.cash}, cannot deduct $${absAmount}`
-            });
-        }
-
-        // Update balance
-        const newCash = isAddition ? user.cash + absAmount : user.cash - absAmount;
-        user.cash = newCash;
-        await user.save();
-
-        // Create transaction
-        const transaction = await Transaction.create({
+        const { transaction, newBalance, user } = await processTransaction(
             userId,
             type,
-            amount: absAmount,
-            balanceAfter: newCash,
-            description: reason || `Admin ${isAddition ? 'credit' : 'debit'} adjustment`,
-            metadata: { adminId: req.user.id, reason }
-        });
+            absAmount,
+            reason || `Admin ${isAddition ? 'credit' : 'debit'} adjustment`,
+            { adminId: req.user.id, reason }
+        );
 
         res.json({
             success: true,
             message: `Successfully ${isAddition ? 'added' : 'deducted'} $${absAmount} ${isAddition ? 'to' : 'from'} ${user.username}'s account`,
             user: {
-                id: user._id,
+                id: user.id,
                 username: user.username,
-                newCash: newCash
+                newCash: newBalance
             },
             transaction
         });
@@ -313,10 +318,17 @@ exports.bulkCredit = async (req, res) => {
         let targetUsers;
 
         if (userIds === 'all') {
-            // Get all active users
-            targetUsers = await User.find({ isActive: true });
+            const { data } = await supabaseAdmin
+                .from('users')
+                .select('id, username, cash')
+                .eq('is_active', true);
+            targetUsers = data;
         } else if (Array.isArray(userIds)) {
-            targetUsers = await User.find({ _id: { $in: userIds } });
+            const { data } = await supabaseAdmin
+                .from('users')
+                .select('id, username, cash')
+                .in('id', userIds);
+            targetUsers = data;
         } else {
             return res.status(400).json({
                 success: false,
@@ -324,7 +336,7 @@ exports.bulkCredit = async (req, res) => {
             });
         }
 
-        if (targetUsers.length === 0) {
+        if (!targetUsers || targetUsers.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'No users found'
@@ -340,39 +352,31 @@ exports.bulkCredit = async (req, res) => {
 
         for (const user of targetUsers) {
             try {
-                // Check sufficient balance for deduction
-                if (!isAddition && user.cash < absAmount) {
+                if (!isAddition && parseFloat(user.cash) < absAmount) {
                     errors.push({
-                        userId: user._id,
+                        userId: user.id,
                         username: user.username,
                         error: `Insufficient balance ($${user.cash})`
                     });
                     continue;
                 }
 
-                // Update balance
-                const newCash = isAddition ? user.cash + absAmount : user.cash - absAmount;
-                user.cash = newCash;
-                await user.save();
-
-                // Create transaction
-                await Transaction.create({
-                    userId: user._id,
+                const { newBalance } = await processTransaction(
+                    user.id,
                     type,
-                    amount: absAmount,
-                    balanceAfter: newCash,
-                    description: reason || `Bulk admin ${isAddition ? 'credit' : 'debit'}`,
-                    metadata: { adminId: req.user.id, reason, bulkOperation: true }
-                });
+                    absAmount,
+                    reason || `Bulk admin ${isAddition ? 'credit' : 'debit'}`,
+                    { adminId: req.user.id, reason, bulkOperation: true }
+                );
 
                 results.push({
-                    userId: user._id,
+                    userId: user.id,
                     username: user.username,
-                    newCash
+                    newCash: newBalance
                 });
             } catch (err) {
                 errors.push({
-                    userId: user._id,
+                    userId: user.id,
                     username: user.username,
                     error: err.message
                 });
@@ -394,4 +398,3 @@ exports.bulkCredit = async (req, res) => {
         });
     }
 };
-

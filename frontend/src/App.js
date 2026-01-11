@@ -9,6 +9,8 @@ import SlotsGame from './pages/SlotsGame';
 import CoinFlipLobby from './components/games/CoinFlipLobby';
 import CoinFlipGame from './components/games/CoinFlipGame';
 import PokerGame from './components/games/PokerGame';
+import Roulette from './components/games/Roulette';
+import Mines from './components/games/Mines';
 import Profile from './pages/Profile';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -21,7 +23,7 @@ function App() {
       <Router>
         <div className="App">
           <Navbar />
-          <div className="container mt-4">
+          <div className="main-content">
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -70,6 +72,22 @@ function App() {
                 element={
                   <PrivateRoute>
                     <PokerGame />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/roulette"
+                element={
+                  <PrivateRoute>
+                    <Roulette />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/mines"
+                element={
+                  <PrivateRoute>
+                    <Mines />
                   </PrivateRoute>
                 }
               />

@@ -59,25 +59,13 @@ const Profile = ({ showTransactions = true, compact = false }) => {
 
     const getTypeColor = (type) => {
         if (['win', 'bonus', 'admin_grant', 'credit', 'game_win'].includes(type)) {
-            return 'text-success'; // Neon Green
+            return 'text-warning'; // Gold
         }
         return 'text-danger'; // Red
     };
 
     const getTypeIcon = (type) => {
-        const icons = {
-            'bonus': '🎁',
-            'win': '🏆',
-            'game_win': '🏆',
-            'loss': '💸',
-            'game_loss': '💸',
-            'bet': '🎲',
-            'admin_grant': '👑',
-            'admin_deduct': '⚠️',
-            'credit': '💰',
-            'debit': '💳'
-        };
-        return icons[type] || '📝';
+        return '';
     };
 
     return (
@@ -101,14 +89,14 @@ const Profile = ({ showTransactions = true, compact = false }) => {
 
                     <div className="text-end mt-3 mt-md-0">
                         <div className="text-muted small">Current Balance</div>
-                        <div className="balance-display display-6 fw-bold text-success">
+                        <div className="balance-display display-6 fw-bold text-warning">
                             ${user?.cash?.toLocaleString() || 0}
                         </div>
                         <button
-                            className="btn btn-success btn-sm mt-2 fw-bold"
+                            className="btn btn-warning btn-sm mt-2 fw-bold"
                             onClick={() => setShowTopUp(true)}
                         >
-                            + Top Up Wallet
+                            Top Up Wallet
                         </button>
                     </div>
                 </div>
@@ -118,13 +106,13 @@ const Profile = ({ showTransactions = true, compact = false }) => {
             {showTopUp && (
                 <div className="params-modal-overlay">
                     <div className="params-modal">
-                        <h4 className="text-white mb-3">💰 Top Up Wallet</h4>
+                        <h4 className="text-white mb-3">Top Up Wallet</h4>
                         <p className="text-muted">Select an amount to deposit (Demo)</p>
                         <div className="d-flex gap-2 justify-content-center mb-4">
                             {[100, 500, 1000, 5000].map(amt => (
                                 <button
                                     key={amt}
-                                    className={`btn ${topUpAmount === amt ? 'btn-success' : 'btn-outline-light'}`}
+                                    className={`btn ${topUpAmount === amt ? 'btn-warning' : 'btn-outline-light'}`}
                                     onClick={() => setTopUpAmount(amt)}
                                 >
                                     ${amt}
@@ -145,7 +133,7 @@ const Profile = ({ showTransactions = true, compact = false }) => {
 
             {showTransactions && (
                 <div className="card p-4">
-                    <h4 className="text-white mb-4">📜 Recent Transactions</h4>
+                    <h4 className="text-white mb-4">Recent Transactions</h4>
 
                     {loading ? (
                         <div className="text-center py-4">
@@ -167,7 +155,7 @@ const Profile = ({ showTransactions = true, compact = false }) => {
                                 <tbody>
                                     {transactions.map((tx) => (
                                         <tr key={tx._id}>
-                                            <td> {getTypeIcon(tx.type)} <span className="text-capitalize">{tx.type.replace('_', ' ')}</span></td>
+                                            <td><span className="text-capitalize">{tx.type.replace('_', ' ')}</span></td>
                                             <td>{tx.description}</td>
                                             <td className={getTypeColor(tx.type)}>
                                                 {['win', 'bonus', 'admin_grant', 'credit', 'game_win'].includes(tx.type) ? '+' : '-'}

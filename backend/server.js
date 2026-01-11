@@ -1,9 +1,8 @@
-require('dotenv').config(); // Trigger restart
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const mongoose = require('mongoose');
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -13,7 +12,8 @@ const userRoutes = require('./routes/user');
 const walletRoutes = require('./routes/wallet');
 const adminRoutes = require('./routes/admin');
 const gameRoutes = require('./routes/games');
-const testRoutes = require('./routes/test');
+const rouletteRoutes = require('./routes/roulette');
+const minesRoutes = require('./routes/mines');
 
 const app = express();
 const server = http.createServer(app);
@@ -39,10 +39,9 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected successfully'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+// Supabase connection verification
+const { supabase } = require('./config/supabase');
+console.log('🔗 Supabase client initialized');
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -50,16 +49,31 @@ app.use('/api/users', userRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/games', gameRoutes);
-app.use('/api/testusers', testRoutes);
+app.use('/api/games/roulette', rouletteRoutes);
+app.use('/api/games/mines', minesRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'Backend initialized' });
+  res.json({ message: 'Backend initialized with Supabase' });
 });
 
 // Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'StakeX API is running' });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Quick Supabase check
+    const { data, error } = await supabase.from('users').select('id').limit(1);
+    res.json({
+      status: 'ok',
+      message: 'StakeX API is running with Supabase',
+      database: error ? 'error' : 'connected'
+    });
+  } catch (err) {
+    res.json({
+      status: 'ok',
+      message: 'StakeX API is running',
+      database: 'unknown'
+    });
+  }
 });
 
 // Error handling middleware
@@ -73,7 +87,6 @@ app.use((err, req, res, next) => {
 });
 
 // Socket.io connection handling
-// Socket.io connection handling
 require('./socket/poker')(io);
 require('./socket/coinflip')(io);
 
@@ -82,6 +95,7 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 StakeX server running on port ${PORT}`);
   console.log(`📡 Socket.io ready for connections`);
+  console.log(`🗄️  Using Supabase for database`);
 });
 
 module.exports = { app, io };

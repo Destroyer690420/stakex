@@ -1,156 +1,304 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import toast, { Toaster } from 'react-hot-toast';
+import './Slots.css';
 
 const Slots = () => {
     const { user, updateUser } = useContext(AuthContext);
-    const [betAmount, setBetAmount] = useState(10);
+    const [betAmount, setBetAmount] = useState(100);
     const [spinning, setSpinning] = useState(false);
-    // 3x3 Grid
-    const [grid, setGrid] = useState([
-        ['❓', '❓', '❓'],
-        ['❓', '❓', '❓'],
-        ['❓', '❓', '❓']
-    ]);
-    const [message, setMessage] = useState('');
-    const [winAmount, setWinAmount] = useState(0);
+    const [reels, setReels] = useState(['❓', '❓', '❓']);
+    const [result, setResult] = useState(null);
+    const [lastWin, setLastWin] = useState(0);
 
-    // Symbols matching backend
-    const SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '7️⃣', '⭐'];
+    // Symbols for animation
+    const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '7️⃣'];
 
-    // Intervals for 3 columns (reels) - we animate columns, not rows
-    const reelIntervals = useRef([]);
+    // Refs for reel animation
+    const reelRefs = [useRef(null), useRef(null), useRef(null)];
+    const animationRefs = useRef([]);
+
+    // Cleanup animations on unmount
+    useEffect(() => {
+        return () => {
+            animationRefs.current.forEach(clearInterval);
+        };
+    }, []);
 
     const handleSpin = async () => {
         if (spinning) return;
+
+        // Validate bet
+        if (betAmount < 10) {
+            toast.error('Minimum bet is $10');
+            return;
+        }
+        if (betAmount > 10000) {
+            toast.error('Maximum bet is $10,000');
+            return;
+        }
         if (betAmount > user.cash) {
-            setMessage('Insufficient funds!');
+            toast.error('Insufficient balance!');
             return;
         }
 
         setSpinning(true);
-        setMessage('');
-        setWinAmount(0);
+        setResult(null);
+        setLastWin(0);
 
-        // Start animation: We simulate 3 reels spinning independently
-        // For visual, we update the whole grid randomly
-        reelIntervals.current = [0, 1, 2].map(colIndex => {
+        // Start spinning animation for each reel
+        animationRefs.current = reelRefs.map((_, index) => {
             return setInterval(() => {
-                setGrid(prev => {
-                    const newGrid = prev.map(row => [...row]);
-                    // Randomize this column in all 3 rows
-                    for (let r = 0; r < 3; r++) {
-                        newGrid[r][colIndex] = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-                    }
-                    return newGrid;
+                setReels(prev => {
+                    const newReels = [...prev];
+                    newReels[index] = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                    return newReels;
                 });
-            }, 100 + (colIndex * 20)); // Stagger slightly
+            }, 80 + index * 20);
         });
 
         try {
-            // Call API: Correct endpoint
             const response = await api.post('/games/slots/spin', { betAmount });
-            const { result, newCash } = response.data;
+            const { result: spinResult, newCash } = response.data;
 
-            // Delayed stop for effect
+            // Stop reels sequentially with delays
+            const stopDelays = [800, 1200, 1600];
+
+            spinResult.symbols.forEach((symbol, index) => {
+                setTimeout(() => {
+                    clearInterval(animationRefs.current[index]);
+                    setReels(prev => {
+                        const newReels = [...prev];
+                        newReels[index] = symbol;
+                        return newReels;
+                    });
+
+                    // Add bounce class
+                    if (reelRefs[index].current) {
+                        reelRefs[index].current.classList.add('bounce');
+                        setTimeout(() => {
+                            reelRefs[index].current?.classList.remove('bounce');
+                        }, 400);
+                    }
+                }, stopDelays[index]);
+            });
+
+            // After all reels stop
             setTimeout(() => {
-                clearIntervals();
-                setGrid(result.grid); // Backend returns 3x3 grid
-
-                // Update Global User State
-                updateUser({ cash: newCash });
-
                 setSpinning(false);
-                if (result.won) {
-                    setWinAmount(result.payout);
-                    setMessage(`WIN! ${result.multiplier}x Multiplier! 🎉`);
-                } else {
-                    setMessage('No match on middle row. Try again!');
-                }
+                updateUser({ cash: newCash });
+                setResult(spinResult);
 
-            }, 2000);
+                if (spinResult.won) {
+                    setLastWin(spinResult.payout);
+                    toast.success(`🎉 You won $${spinResult.payout.toFixed(2)}! (${spinResult.multiplier}x)`, {
+                        duration: 3000,
+                        icon: '🎰'
+                    });
+                }
+            }, 1800);
 
         } catch (error) {
-            console.error('Spin error:', error);
-            clearIntervals();
+            // Stop all animations on error
+            animationRefs.current.forEach(clearInterval);
             setSpinning(false);
-            setMessage(error.response?.data?.message || 'Game failed');
+            setReels(['❓', '❓', '❓']);
+
+            const message = error.response?.data?.message || 'Spin failed. Please try again.';
+            toast.error(message);
         }
     };
 
-    const clearIntervals = () => {
-        reelIntervals.current.forEach(clearInterval);
-    };
-
     const handleBetChange = (e) => {
-        const val = parseInt(e.target.value);
+        const val = parseFloat(e.target.value);
         if (!isNaN(val) && val >= 0) setBetAmount(val);
     };
 
     const adjustBet = (multiplier) => {
-        setBetAmount(Math.floor(betAmount * multiplier));
+        const newBet = Math.max(10, Math.floor(betAmount * multiplier));
+        setBetAmount(Math.min(newBet, user?.cash || 10000));
+    };
+
+    const setMaxBet = () => {
+        setBetAmount(Math.min(user?.cash || 10000, 10000));
     };
 
     return (
-        <div className="slots-container text-center">
-            <div className="mb-3 text-white small">
-                Match 3 symbols on the <span className="text-warning fw-bold">MIDDLE ROW</span> to win!
-            </div>
+        <div className="slots-wrapper">
+            <Toaster position="top-center" />
 
-            {/* 3x3 Reels Grid */}
-            <div className="reels-container mb-5 d-inline-block p-3" style={{ background: '#2B3A48', borderRadius: '15px', border: '4px solid #F5C518' }}>
-                {grid.map((row, rowIndex) => (
-                    <div key={rowIndex} className={`d-flex gap-2 mb-2 ${rowIndex === 1 ? 'middle-row' : ''}`}>
-                        {row.map((symbol, colIndex) => (
-                            <div key={`${rowIndex}-${colIndex}`}
-                                className={`reel-cell ${spinning ? 'spinning' : ''} ${rowIndex === 1 && winAmount > 0 ? 'win-glow' : ''}`}>
-                                {symbol}
+            <div className="slots-container">
+                {/* Control Panel (Left) */}
+                <div className="slots-panel">
+                    <div className="panel-watermark">STAKEX</div>
+
+                    {/* Bet Amount Input */}
+                    <div className="input-group">
+                        <div className="input-label">
+                            <span>Bet Amount</span>
+                            <span className="balance-tag">
+                                Balance: ${(user?.cash || 0).toFixed(2)}
+                            </span>
+                        </div>
+                        <div className="bet-input-row">
+                            <div className="bet-field">
+                                <div className="input-field">
+                                    <span className="cash-icon">💰</span>
+                                    <input
+                                        type="number"
+                                        value={betAmount}
+                                        onChange={handleBetChange}
+                                        disabled={spinning}
+                                        min="10"
+                                        max="10000"
+                                        step="10"
+                                    />
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                ))}
-
-                {/* Payline Indicator */}
-                <div className="payline-indicator" style={{ display: 'none' }}></div>
-            </div>
-
-            {/* Results */}
-            <div className="result-display mb-4" style={{ minHeight: '60px' }}>
-                {message && <h3 className={winAmount > 0 ? 'text-success fw-bold' : 'text-danger'}>{message}</h3>}
-                {winAmount > 0 && <h2 className="text-success glow-text">+{winAmount}</h2>}
-            </div>
-
-            {/* Controls */}
-            <div className="controls-container p-4 rounded" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                <div className="row justify-content-center align-items-center g-3">
-                    <div className="col-auto">
-                        <label className="text-muted me-2">Bet Amount</label>
-                        <div className="input-group">
-                            <button className="btn btn-outline-secondary" onClick={() => adjustBet(0.5)}>1/2</button>
-                            <input
-                                type="number"
-                                className="form-control text-center text-white"
-                                style={{ maxWidth: '100px', background: 'transparent', borderColor: '#444' }}
-                                value={betAmount}
-                                onChange={handleBetChange}
-                            />
-                            <button className="btn btn-outline-secondary" onClick={() => adjustBet(2)}>2x</button>
+                            <div className="quick-btns">
+                                <button
+                                    className="quick-btn"
+                                    onClick={() => adjustBet(0.5)}
+                                    disabled={spinning}
+                                >
+                                    ½
+                                </button>
+                                <button
+                                    className="quick-btn"
+                                    onClick={() => adjustBet(2)}
+                                    disabled={spinning}
+                                >
+                                    2×
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="col-auto">
+                    {/* Quick Bet Buttons */}
+                    <div className="quick-bet-row">
                         <button
-                            className="btn btn-primary btn-lg px-5 fw-bold"
-                            style={{
-                                background: spinning ? '#555' : 'linear-gradient(135deg, #00e701 0%, #00b894 100%)',
-                                color: spinning ? '#aaa' : '#000',
-                                boxShadow: spinning ? 'none' : '0 0 20px rgba(0, 231, 1, 0.4)'
-                            }}
-                            onClick={handleSpin}
+                            className="preset-btn"
+                            onClick={() => setBetAmount(10)}
                             disabled={spinning}
                         >
-                            {spinning ? 'SPINNING...' : 'SPIN'}
+                            $10
                         </button>
+                        <button
+                            className="preset-btn"
+                            onClick={() => setBetAmount(50)}
+                            disabled={spinning}
+                        >
+                            $50
+                        </button>
+                        <button
+                            className="preset-btn"
+                            onClick={() => setBetAmount(100)}
+                            disabled={spinning}
+                        >
+                            $100
+                        </button>
+                        <button
+                            className="preset-btn max"
+                            onClick={setMaxBet}
+                            disabled={spinning}
+                        >
+                            MAX
+                        </button>
+                    </div>
+
+                    {/* Spin Button */}
+                    <button
+                        className={`bet-button ${spinning ? 'spinning' : ''}`}
+                        onClick={handleSpin}
+                        disabled={spinning}
+                    >
+                        {spinning ? (
+                            <span className="spinner"></span>
+                        ) : (
+                            <>
+                                <span className="btn-glow"></span>
+                                BET
+                            </>
+                        )}
+                    </button>
+
+                    {/* Paytable */}
+                    <div className="paytable">
+                        <div className="paytable-title">PAYOUTS</div>
+                        <div className="paytable-row jackpot">
+                            <span>7️⃣ 7️⃣ 7️⃣</span>
+                            <span className="payout">20×</span>
+                        </div>
+                        <div className="paytable-row diamond">
+                            <span>💎 💎 💎</span>
+                            <span className="payout">10×</span>
+                        </div>
+                        <div className="paytable-row">
+                            <span>Any 3 Match</span>
+                            <span className="payout">5×</span>
+                        </div>
+                        <div className="paytable-row">
+                            <span>2 Matching</span>
+                            <span className="payout">1.5×</span>
+                        </div>
+                    </div>
+
+                    {/* Last Win Display */}
+                    {lastWin > 0 && (
+                        <div className="last-win">
+                            <span className="win-label">LAST WIN</span>
+                            <span className="win-amount">${lastWin.toFixed(2)}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Reels Area (Right) */}
+                <div className="slots-reels-area">
+                    <div className="slots-machine">
+                        <div className="machine-header">
+                            <span className="machine-title">🎰 SLOTS 🎰</span>
+                        </div>
+
+                        <div className="reels-container">
+                            {reels.map((symbol, index) => (
+                                <div
+                                    key={index}
+                                    ref={reelRefs[index]}
+                                    className={`reel ${spinning ? 'spinning' : ''} ${result?.won ? 'win' : ''}`}
+                                >
+                                    <div className="reel-inner">
+                                        <span className="symbol">{symbol}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Win Line Indicator */}
+                        <div className={`win-line ${result?.won ? 'active' : ''}`}></div>
+
+                        {/* Result Display */}
+                        {result && (
+                            <div className={`result-display ${result.won ? 'won' : 'lost'}`}>
+                                {result.won ? (
+                                    <>
+                                        <span className="result-text">🎉 WIN!</span>
+                                        <span className="result-multiplier">{result.multiplier}×</span>
+                                        <span className="result-amount">+${result.payout.toFixed(2)}</span>
+                                    </>
+                                ) : (
+                                    <span className="result-text">No Match</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Decorative Elements */}
+                    <div className="slots-footer">
+                        <div className="footer-info">
+                            <span>Min: $10</span>
+                            <span>Max: $10,000</span>
+                        </div>
                     </div>
                 </div>
             </div>

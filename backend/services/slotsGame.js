@@ -1,24 +1,25 @@
-// Slots game configuration
-const SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '7️⃣', '⭐'];
+// Slots game configuration - Updated with new payout rules
+const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '7️⃣'];
 
+// Payout table for 3 matching symbols
 const PAYTABLE = {
-    '🍒🍒🍒': 3,
-    '🍋🍋🍋': 4,
-    '🍇🍇🍇': 5,
-    '🔔🔔🔔': 8,
-    '💎💎💎': 10,
-    '⭐⭐⭐': 15,
-    '7️⃣7️⃣7️⃣': 50
+    '7️⃣': 20,  // Jackpot
+    '💎': 10,  // Diamond
+    '🔔': 5,   // Bell
+    '🍇': 5,   // Grapes
+    '🍊': 5,   // Orange
+    '🍋': 5,   // Lemon
+    '🍒': 5    // Cherry
 };
 
 // Symbol weights (higher = more common)
 const SYMBOL_WEIGHTS = {
-    '🍒': 20,
-    '🍋': 18,
+    '🍒': 28,
+    '🍋': 22,
+    '🍊': 18,
     '🍇': 15,
-    '🔔': 12,
-    '💎': 8,
-    '⭐': 5,
+    '🔔': 10,
+    '💎': 5,
     '7️⃣': 2
 };
 
@@ -36,48 +37,40 @@ const getRandomSymbol = () => {
     return SYMBOLS[0];
 };
 
-// Generate a 3x3 grid
-const generateGrid = () => {
-    const grid = [];
-    for (let row = 0; row < 3; row++) {
-        grid.push([]);
-        for (let col = 0; col < 3; col++) {
-            grid[row].push(getRandomSymbol());
-        }
-    }
-    return grid;
+// Generate 3 symbols (single row of reels)
+const generateSymbols = () => {
+    return [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
 };
 
-// Check for wins (middle row only for MVP)
-const checkWin = (grid) => {
-    const middleRow = grid[1].join('');
+// Calculate multiplier based on symbols
+const calculateMultiplier = (symbols) => {
+    const [s1, s2, s3] = symbols;
 
-    if (PAYTABLE[middleRow]) {
-        return {
-            won: true,
-            multiplier: PAYTABLE[middleRow],
-            winLine: grid[1]
-        };
+    // All 3 match
+    if (s1 === s2 && s2 === s3) {
+        return PAYTABLE[s1] || 5;
     }
 
-    return {
-        won: false,
-        multiplier: 0,
-        winLine: null
-    };
+    // 2 matching
+    if (s1 === s2 || s2 === s3 || s1 === s3) {
+        return 1.5;
+    }
+
+    // No match
+    return 0;
 };
 
 // Main spin function
 const spin = (betAmount) => {
-    const grid = generateGrid();
-    const result = checkWin(grid);
-    const payout = result.won ? betAmount * result.multiplier : 0;
+    const symbols = generateSymbols();
+    const multiplier = calculateMultiplier(symbols);
+    const won = multiplier > 0;
+    const payout = won ? Math.round(betAmount * multiplier * 100) / 100 : 0;
 
     return {
-        grid,
-        won: result.won,
-        multiplier: result.multiplier,
-        winLine: result.winLine,
+        symbols,
+        won,
+        multiplier,
         betAmount,
         payout,
         netResult: payout - betAmount
@@ -87,5 +80,6 @@ const spin = (betAmount) => {
 module.exports = {
     spin,
     SYMBOLS,
-    PAYTABLE
+    PAYTABLE,
+    SYMBOL_WEIGHTS
 };

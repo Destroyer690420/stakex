@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
-const Transaction = require('../models/Transaction');
+const { supabaseAdmin } = require('../config/supabase');
 const { protect } = require('../middleware/auth');
 
 const DAILY_BONUS_AMOUNT = 100;
@@ -11,10 +10,17 @@ const BONUS_COOLDOWN_HOURS = 24;
 // @route   GET /api/wallet/balance
 router.get('/balance', protect, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('cash, stats')
+            .eq('id', req.user.id)
+            .single();
+
+        if (error) throw error;
+
         res.json({
             success: true,
-            cash: user.cash,
+            cash: parseFloat(user.cash),
             stats: user.stats
         });
     } catch (error) {
@@ -31,14 +37,16 @@ router.get('/history', protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
-        const skip = (page - 1) * limit;
+        const offset = (page - 1) * limit;
 
-        const transactions = await Transaction.find({ userId: req.user.id })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        const { data: transactions, error, count } = await supabaseAdmin
+            .from('transactions')
+            .select('*', { count: 'exact' })
+            .eq('user_id', req.user.id)
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
-        const total = await Transaction.countDocuments({ userId: req.user.id });
+        if (error) throw error;
 
         res.json({
             success: true,
@@ -46,8 +54,8 @@ router.get('/history', protect, async (req, res) => {
             pagination: {
                 page,
                 limit,
-                total,
-                pages: Math.ceil(total / limit)
+                total: count,
+                pages: Math.ceil(count / limit)
             }
         });
     } catch (error) {
@@ -63,9 +71,7 @@ router.get('/history', protect, async (req, res) => {
 router.post('/transaction', protect, async (req, res) => {
     try {
         const { amount, type } = req.body;
-        const user = await User.findById(req.user.id);
 
-        // Validate input
         if (!amount || amount <= 0) {
             return res.status(400).json({
                 success: false,
@@ -80,61 +86,43 @@ router.post('/transaction', protect, async (req, res) => {
             });
         }
 
-        let newCash = user.cash;
+        // Map types to internal types
+        const typeMap = {
+            'bet': 'game_loss',
+            'win': 'game_win',
+            'loss': 'game_loss',
+            'credit': 'credit',
+            'debit': 'debit'
+        };
 
-        // Process based on type
-        if (['bet', 'loss', 'debit'].includes(type)) {
-            // Subtract from balance
-            if (user.cash < amount) {
+        const { data, error } = await supabaseAdmin.rpc('process_transaction', {
+            p_user_id: req.user.id,
+            p_type: typeMap[type],
+            p_amount: amount,
+            p_description: `${type.charAt(0).toUpperCase() + type.slice(1)}: $${amount}`
+        });
+
+        if (error) {
+            if (error.message.includes('Insufficient balance')) {
                 return res.status(400).json({
                     success: false,
                     message: 'Insufficient cash balance'
                 });
             }
-            newCash -= amount;
-
-            if (type === 'loss') {
-                user.stats.lifetimeLosses += amount;
-                user.stats.losses += 1;
-            }
-        } else if (['win', 'credit'].includes(type)) {
-            // Add to balance
-            newCash += amount;
-
-            if (type === 'win') {
-                user.stats.lifetimeEarnings += amount;
-                user.stats.wins += 1;
-                if (amount > user.stats.biggestWin) {
-                    user.stats.biggestWin = amount;
-                }
-            }
+            throw error;
         }
-
-        // Update user cash
-        user.cash = newCash;
-        await user.save();
-
-        // Create transaction record
-        const transaction = await Transaction.create({
-            userId: req.user.id,
-            type,
-            amount,
-            balanceAfter: newCash,
-            description: `${type.charAt(0).toUpperCase() + type.slice(1)}: $${amount}`
-        });
 
         res.json({
             success: true,
             message: `Transaction successful: ${type} $${amount}`,
-            cash: newCash,
-            transaction
+            cash: parseFloat(data[0].new_balance),
+            transaction: { id: data[0].transaction_id }
         });
     } catch (error) {
         console.error('Transaction error:', error);
         res.status(500).json({
             success: false,
-            message: 'Transaction failed',
-            error: error.message
+            message: error.message || 'Transaction failed'
         });
     }
 });
@@ -143,54 +131,29 @@ router.post('/transaction', protect, async (req, res) => {
 // @route   GET /api/wallet/claimbonus
 router.get('/claimbonus', protect, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const { data, error } = await supabaseAdmin.rpc('claim_daily_bonus', {
+            p_user_id: req.user.id,
+            p_bonus_amount: DAILY_BONUS_AMOUNT,
+            p_cooldown_hours: BONUS_COOLDOWN_HOURS
+        });
 
-        // Check if bonus is available
-        const now = new Date();
-        let canClaim = false;
-        let hoursUntilNextBonus = 0;
+        if (error) throw error;
 
-        if (!user.lastBonusClaim) {
-            // Never claimed before
-            canClaim = true;
-        } else {
-            const hoursSinceLastClaim = (now - user.lastBonusClaim) / (1000 * 60 * 60);
-            if (hoursSinceLastClaim >= BONUS_COOLDOWN_HOURS) {
-                canClaim = true;
-            } else {
-                hoursUntilNextBonus = Math.ceil(BONUS_COOLDOWN_HOURS - hoursSinceLastClaim);
-            }
-        }
+        const result = data[0];
 
-        if (!canClaim) {
+        if (!result.success) {
             return res.status(400).json({
                 success: false,
-                message: `Daily bonus already claimed. Come back in ${hoursUntilNextBonus} hour(s)!`,
-                hoursUntilNextBonus
+                message: result.message
             });
         }
 
-        // Grant the bonus
-        const newCash = user.cash + DAILY_BONUS_AMOUNT;
-        user.cash = newCash;
-        user.lastBonusClaim = now;
-        await user.save();
-
-        // Create transaction record
-        const transaction = await Transaction.create({
-            userId: req.user.id,
-            type: 'bonus',
-            amount: DAILY_BONUS_AMOUNT,
-            balanceAfter: newCash,
-            description: 'Daily login bonus claimed!'
-        });
-
         res.json({
             success: true,
-            message: `🎁 Daily bonus of $${DAILY_BONUS_AMOUNT} claimed!`,
+            message: `🎁 ${result.message}`,
             bonusAmount: DAILY_BONUS_AMOUNT,
-            cash: newCash,
-            transaction
+            cash: parseFloat(result.new_balance),
+            transaction: { id: result.transaction_id }
         });
     } catch (error) {
         console.error('Claim bonus error:', error);
@@ -201,20 +164,27 @@ router.get('/claimbonus', protect, async (req, res) => {
     }
 });
 
-// @desc    Check bonus status (is bonus available?)
+// @desc    Check bonus status
 // @route   GET /api/wallet/bonusstatus
 router.get('/bonusstatus', protect, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        const now = new Date();
+        const { data: user, error } = await supabaseAdmin
+            .from('users')
+            .select('last_bonus_claim')
+            .eq('id', req.user.id)
+            .single();
 
+        if (error) throw error;
+
+        const now = new Date();
         let canClaim = false;
         let hoursUntilNextBonus = 0;
 
-        if (!user.lastBonusClaim) {
+        if (!user.last_bonus_claim) {
             canClaim = true;
         } else {
-            const hoursSinceLastClaim = (now - user.lastBonusClaim) / (1000 * 60 * 60);
+            const lastClaim = new Date(user.last_bonus_claim);
+            const hoursSinceLastClaim = (now - lastClaim) / (1000 * 60 * 60);
             if (hoursSinceLastClaim >= BONUS_COOLDOWN_HOURS) {
                 canClaim = true;
             } else {
@@ -227,7 +197,7 @@ router.get('/bonusstatus', protect, async (req, res) => {
             canClaim,
             bonusAmount: DAILY_BONUS_AMOUNT,
             hoursUntilNextBonus,
-            lastClaimed: user.lastBonusClaim
+            lastClaimed: user.last_bonus_claim
         });
     } catch (error) {
         res.status(500).json({

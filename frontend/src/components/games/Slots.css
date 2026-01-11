@@ -1,0 +1,633 @@
+/* ========================================
+   SLOTS GAME - PREMIUM STAKEX THEME
+   Dark Gold/Black Stake Style
+   ======================================== */
+
+/* Wrapper */
+.slots-wrapper {
+    min-height: calc(100vh - 80px);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+}
+
+/* Ambient glow */
+.slots-wrapper::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(212, 175, 55, 0.02) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+/* Main Container */
+.slots-container {
+    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ========== CONTROL PANEL (LEFT) ========== */
+.slots-panel {
+    width: 320px;
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.panel-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 48px;
+    font-weight: 900;
+    color: rgba(212, 175, 55, 0.03);
+    letter-spacing: 8px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* Input Groups */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.balance-tag {
+    color: #d4af37;
+    font-weight: 700;
+}
+
+/* Bet Input Row */
+.bet-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.bet-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.input-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(212, 175, 55, 0.15);
+    border-radius: 12px;
+    padding: 0 14px;
+    height: 50px;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus-within {
+    border-color: #d4af37;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+}
+
+.input-field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    outline: none;
+    width: 100%;
+}
+
+.input-field input::-webkit-outer-spin-button,
+.input-field input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.cash-icon {
+    font-size: 20px;
+}
+
+/* Quick Buttons */
+.quick-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.quick-btn {
+    padding: 0 12px;
+    height: 23px;
+    min-width: 44px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 2px solid rgba(212, 175, 55, 0.2);
+    border-radius: 8px;
+    color: #d4af37;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quick-btn:hover:not(:disabled) {
+    background: rgba(212, 175, 55, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+.quick-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Quick Bet Row */
+.quick-bet-row {
+    display: flex;
+    gap: 8px;
+}
+
+.preset-btn {
+    flex: 1;
+    padding: 10px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #7a8599;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.preset-btn:hover:not(:disabled) {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.3);
+    color: #d4af37;
+}
+
+.preset-btn.max {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.3);
+    color: #d4af37;
+}
+
+.preset-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Bet Button */
+.bet-button {
+    position: relative;
+    width: 100%;
+    height: 56px;
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    border: none;
+    border-radius: 14px;
+    color: #000;
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+}
+
+.bet-button:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4);
+}
+
+.bet-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: #555;
+    color: #999;
+}
+
+.bet-button.spinning {
+    background: #444;
+}
+
+.btn-glow {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    100% {
+        left: 100%;
+    }
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Paytable */
+.paytable {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 8px;
+}
+
+.paytable-title {
+    font-size: 11px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.paytable-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 14px;
+    color: #aaa;
+}
+
+.paytable-row:last-child {
+    border-bottom: none;
+}
+
+.paytable-row.jackpot {
+    color: #FFD700;
+}
+
+.paytable-row.diamond {
+    color: #00BFFF;
+}
+
+.paytable-row .payout {
+    font-weight: 700;
+    color: #d4af37;
+}
+
+/* Last Win */
+.last-win {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    animation: winPulse 2s infinite;
+}
+
+@keyframes winPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+    }
+}
+
+.win-label {
+    display: block;
+    font-size: 10px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.last-win .win-amount {
+    font-size: 24px;
+    font-weight: 800;
+    color: #d4af37;
+}
+
+/* ========== REELS AREA (RIGHT) ========== */
+.slots-reels-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.slots-machine {
+    background: linear-gradient(145deg, #1a1a1a 0%, #0f0f0f 100%);
+    border: 3px solid #d4af37;
+    border-radius: 24px;
+    padding: 30px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(212, 175, 55, 0.2),
+        inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+.machine-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.machine-title {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+/* Reels Container */
+.reels-container {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Individual Reel */
+.reel {
+    width: 100px;
+    height: 120px;
+    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+    border: 3px solid #333;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.reel.spinning .reel-inner {
+    animation: reelSpin 0.1s linear infinite;
+    filter: blur(2px);
+}
+
+.reel.win {
+    border-color: #d4af37;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5),
+        inset 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.reel.bounce .reel-inner {
+    animation: reelBounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.reel-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.symbol {
+    font-size: 56px;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Reel Animations */
+@keyframes reelSpin {
+    0% {
+        transform: translateY(-20px);
+    }
+
+    50% {
+        transform: translateY(20px);
+    }
+
+    100% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes reelBounce {
+    0% {
+        transform: scale(0.8) translateY(-30px);
+    }
+
+    60% {
+        transform: scale(1.1) translateY(10px);
+    }
+
+    80% {
+        transform: scale(0.95) translateY(-5px);
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Win Line */
+.win-line {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    top: 50%;
+    height: 4px;
+    background: transparent;
+    border-radius: 2px;
+    transform: translateY(-50%);
+    transition: all 0.3s ease;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.win-line.active {
+    background: linear-gradient(90deg, #d4af37, #FFD700, #d4af37);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.8);
+    animation: winLineGlow 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes winLineGlow {
+    0% {
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    }
+
+    100% {
+        box-shadow: 0 0 30px rgba(212, 175, 55, 1);
+    }
+}
+
+/* Result Display */
+.result-display {
+    margin-top: 20px;
+    padding: 16px 32px;
+    border-radius: 12px;
+    text-align: center;
+    animation: slideUp 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.result-display.won {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(139, 115, 85, 0.1) 100%);
+    border: 2px solid #d4af37;
+}
+
+.result-display.lost {
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.1) 0%, rgba(200, 60, 70, 0.05) 100%);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+}
+
+.result-text {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.result-display.won .result-text {
+    color: #d4af37;
+}
+
+.result-display.lost .result-text {
+    color: #7a8599;
+}
+
+.result-multiplier {
+    display: block;
+    font-size: 28px;
+    font-weight: 800;
+    color: #FFD700;
+}
+
+.result-amount {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #d4af37;
+    margin-top: 4px;
+}
+
+@keyframes slideUp {
+    0% {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Footer */
+.slots-footer {
+    margin-top: 16px;
+}
+
+.footer-info {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    color: #7a8599;
+    font-size: 12px;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+    .slots-container {
+        flex-direction: column;
+    }
+
+    .slots-panel {
+        width: 100%;
+        max-width: none;
+    }
+
+    .slots-reels-area {
+        order: -1;
+    }
+
+    .reel {
+        width: 80px;
+        height: 100px;
+    }
+
+    .symbol {
+        font-size: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .slots-wrapper {
+        padding: 12px;
+    }
+
+    .slots-panel {
+        padding: 16px;
+    }
+
+    .slots-machine {
+        padding: 16px;
+    }
+
+    .reels-container {
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .reel {
+        width: 70px;
+        height: 90px;
+    }
+
+    .symbol {
+        font-size: 36px;
+    }
+
+    .machine-title {
+        font-size: 20px;
+    }
+}

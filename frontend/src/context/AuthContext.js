@@ -1,5 +1,4 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
 export const AuthContext = createContext();
@@ -28,32 +27,13 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Immediate state update from token
-            try {
-                const decoded = jwtDecode(token);
-                // Check expiration
-                const currentTime = Date.now() / 1000;
-                if (decoded.exp < currentTime) {
-                    localStorage.removeItem('token');
-                    setUser(null);
-                    setIsAuthenticated(false);
-                    setLoading(false);
-                    return;
-                }
-                // Set basic user info from token immediately
-                // Note: token might not have latest cash balance, so we still fetch /me
-                setUser(prev => prev || { ...decoded, id: decoded.id });
-                setIsAuthenticated(true);
-            } catch (e) {
-                console.error('Invalid token', e);
-            }
-
             const response = await api.get('/auth/me');
             setUser(response.data.user);
             setIsAuthenticated(true);
         } catch (error) {
             console.error('Load user error:', error);
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             setUser(null);
             setIsAuthenticated(false);
         } finally {
@@ -64,7 +44,12 @@ export const AuthProvider = ({ children }) => {
     // Register
     const register = async (username, email, password) => {
         const response = await api.post('/auth/register', { username, email, password });
-        localStorage.setItem('token', response.data.token);
+        if (response.data.token) {
+            localStorage.setItem('token', response.data.token);
+            if (response.data.refreshToken) {
+                localStorage.setItem('refreshToken', response.data.refreshToken);
+            }
+        }
         setUser(response.data.user);
         setIsAuthenticated(true);
         return response.data;
@@ -74,6 +59,9 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         const response = await api.post('/auth/login', { email, password });
         localStorage.setItem('token', response.data.token);
+        if (response.data.refreshToken) {
+            localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
         setUser(response.data.user);
         setIsAuthenticated(true);
         return response.data;
@@ -82,6 +70,7 @@ export const AuthProvider = ({ children }) => {
     // Logout
     const logout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         setUser(null);
         setIsAuthenticated(false);
     };

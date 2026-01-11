@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 
 // Protect routes - require authentication
 exports.protect = async (req, res, next) => {
@@ -17,39 +16,57 @@ exports.protect = async (req, res, next) => {
             });
         }
 
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = await User.findById(decoded.id);
+        // Verify token with Supabase
+        const { data: { user }, error } = await supabase.auth.getUser(token);
 
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'User not found'
-                });
-            }
-
-            if (!req.user.isActive) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Account has been deactivated'
-                });
-            }
-
-            next();
-        } catch (err) {
+        if (error || !user) {
             return res.status(401).json({
                 success: false,
                 message: 'Token is invalid or expired'
             });
         }
+
+        // Get user profile from public.users table
+        const { data: profile, error: profileError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (profileError || !profile) {
+            return res.status(401).json({
+                success: false,
+                message: 'User profile not found'
+            });
+        }
+
+        if (!profile.is_active) {
+            return res.status(401).json({
+                success: false,
+                message: 'Account has been deactivated'
+            });
+        }
+
+        // Attach user to request
+        req.user = {
+            id: user.id,
+            email: user.email,
+            ...profile
+        };
+
+        next();
     } catch (error) {
-        next(error);
+        console.error('Auth middleware error:', error);
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication failed'
+        });
     }
 };
 
 // Admin only middleware
 exports.adminOnly = (req, res, next) => {
-    if (!req.user.isAdmin) {
+    if (!req.user.is_admin) {
         return res.status(403).json({
             success: false,
             message: 'Access denied. Admin privileges required.'

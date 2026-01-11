@@ -1,212 +1,264 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import { io } from 'socket.io-client';
+import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import Chat from './Chat';
-
-let socket;
+import { supabase } from '../../services/supabase';
+import toast, { Toaster } from 'react-hot-toast';
+import './CoinFlip.css';
 
 const CoinFlipLobby = () => {
-    const { user, refreshUser } = useContext(AuthContext);
-    const navigate = useNavigate();
+    const { user, updateUser } = useContext(AuthContext);
+    const [betAmount, setBetAmount] = useState(100);
+    const [selectedSide, setSelectedSide] = useState('heads');
+    const [flipping, setFlipping] = useState(false);
+    const [coinState, setCoinState] = useState('idle'); // idle, spinning, result-heads, result-tails
+    const [result, setResult] = useState(null);
+    const [lastWin, setLastWin] = useState(0);
 
-    // Game State
-    const [gameState, setGameState] = useState(null);
-    const [betAmount, setBetAmount] = useState(10);
-    const [myBet, setMyBet] = useState(null);
-    const [connected, setConnected] = useState(false);
+    const handleFlip = async () => {
+        if (flipping) return;
 
-    // Animation refs
-    const coinRef = useRef(null);
-
-    useEffect(() => {
-        const socketUrl = 'http://localhost:5000/coinflip';
-        socket = io(socketUrl);
-
-        socket.on('connect', () => {
-            console.log('Connected to CoinFlip Arena');
-            setConnected(true);
-            socket.emit('join_check');
-        });
-
-        socket.on('gameState', (state) => {
-            setGameState(state);
-
-            // Check if we have a bet in this round
-            if (user) {
-                const myExistingBet = state.bets.find(b => b.userId === user.id);
-                setMyBet(myExistingBet || null);
-            }
-        });
-
-        socket.on('betConfirmed', ({ amount, side }) => {
-            refreshUser();
-        });
-
-        socket.on('error', ({ message }) => {
-            alert(message);
-        });
-
-        return () => {
-            socket.disconnect();
-        };
-    }, [user, refreshUser]);
-
-    const handlePlaceBet = (side) => {
-        if (!connected || !gameState || gameState.status !== 'betting') return;
-        if (myBet) { // Prevent multiple bets for MVP simplicity or allow? Backend allows.
-            // We can allow adding to bet, but let's stick to one bet per round for clean UI
-            // alert("You already have a bet!");
-            // Actually backend allows push.
+        // Validate bet
+        if (betAmount < 10) {
+            toast.error('Minimum bet is $10');
+            return;
+        }
+        if (betAmount > 10000) {
+            toast.error('Maximum bet is $10,000');
+            return;
+        }
+        if (betAmount > user.cash) {
+            toast.error('Insufficient balance!', {
+                icon: '💸',
+                style: {
+                    background: '#0f0f0f',
+                    color: '#fff',
+                    border: '1px solid #ff4757'
+                }
+            });
+            return;
         }
 
-        socket.emit('placeBet', {
-            userId: user.id,
-            username: user.username,
-            amount: parseInt(betAmount),
-            side
-        });
+        setFlipping(true);
+        setResult(null);
+        setLastWin(0);
+        setCoinState('spinning');
+
+        try {
+            const { data, error } = await supabase.rpc('fn_flip_coin', {
+                p_user_id: user.id,
+                p_bet_amount: betAmount,
+                p_chosen_side: selectedSide
+            });
+
+            if (error) throw error;
+
+            if (!data.success) {
+                setCoinState('idle');
+                setFlipping(false);
+                toast.error(data.error || 'Flip failed');
+                return;
+            }
+
+            // Wait for spin animation (1.5s), then land
+            setTimeout(() => {
+                setCoinState(`result-${data.flipResult}`);
+
+                // After coin lands (1s), show result
+                setTimeout(() => {
+                    setResult(data);
+                    setFlipping(false);
+                    updateUser({ cash: data.newBalance });
+
+                    if (data.won) {
+                        setLastWin(data.payout);
+                        toast.success(`🎉 You won $${data.payout.toFixed(2)}!`, {
+                            duration: 3000,
+                            style: {
+                                background: '#0f0f0f',
+                                color: '#d4af37',
+                                border: '1px solid #d4af37'
+                            }
+                        });
+                    }
+                }, 1000);
+            }, 1500);
+
+        } catch (error) {
+            console.error('Flip error:', error);
+            setCoinState('idle');
+            setFlipping(false);
+            toast.error(error.message || 'Flip failed');
+        }
     };
 
-    if (!gameState) return <div className="text-center text-white mt-5">Loading Arena...</div>;
+    const adjustBet = (multiplier) => {
+        const newBet = Math.max(10, Math.floor(betAmount * multiplier));
+        setBetAmount(Math.min(newBet, user?.cash || 10000, 10000));
+    };
+
+    const resetGame = () => {
+        setCoinState('idle');
+        setResult(null);
+    };
 
     return (
-        <div className="container py-4">
-            <h2 className="display-4 text-white mb-4 fw-bold text-center">🪙 Coin Flip Arena</h2>
+        <div className="coinflip-wrapper">
+            <Toaster position="top-center" />
 
-            <div className="row g-4">
-                {/* HEADS Side */}
-                <div className="col-md-3">
-                    <div className="card p-3 h-100 border-success">
-                        <h3 className="text-success text-center">HEADS</h3>
-                        <div className="text-center display-6 mb-3">
-                            <div className="avatar-circle mx-auto mb-2" style={{ width: 60, height: 60, background: '#00e701', border: 'none' }}>H</div>
-                        </div>
-                        <div className="text-center mb-3">
-                            <span className="badge bg-success fs-5">Pool: ${gameState.stats.heads}</span>
-                        </div>
-                        <div className="list-group list-group-flush" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                            {gameState.bets.filter(b => b.side === 'heads').map((bet, i) => (
-                                <div key={i} className="list-group-item bg-transparent text-white d-flex justify-content-between">
-                                    <span>{bet.username}</span>
-                                    <span className="text-success fw-bold">${bet.amount}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+            <div className="coinflip-solo-container">
+                {/* Control Panel (Left) */}
+                <div className="coinflip-panel">
+                    <div className="panel-watermark">STAKEX</div>
 
-                {/* CENTER: Coin & Controls */}
-                <div className="col-md-6 text-center">
-                    {/* Timer / Status */}
-                    <div className="mb-4">
-                        {gameState.status === 'betting' && (
-                            <div className="display-1 fw-bold text-warning">{gameState.timeLeft}s</div>
-                        )}
-                        {gameState.status === 'flipping' && (
-                            <div className="display-4 fw-bold text-info">FLIPPING...</div>
-                        )}
-                        {gameState.status === 'result' && (
-                            <div className="display-4 fw-bold text-white">
-                                {gameState.outcome ? gameState.outcome.toUpperCase() : ''} WINS!
-                            </div>
-                        )}
-                        <p className="text-muted text-uppercase letter-spacing-2">{gameState.status} PHASE</p>
-                    </div>
-
-                    {/* The Coin */}
-                    <div className="coin-container mx-auto mb-5" style={{ height: '200px', width: '200px' }}>
-                        <div className={`coin ${gameState.status === 'flipping' ? 'flipping' : ''} ${gameState.status === 'result' ? gameState.outcome : ''}`}>
-                            <div className="side-a"></div>
-                            <div className="side-b"></div>
+                    {/* Bet Amount */}
+                    <div className="input-group">
+                        <div className="input-label">
+                            <span>Bet Amount</span>
+                            <span className="balance-tag">
+                                Balance: ${(user?.cash || 0).toFixed(2)}
+                            </span>
                         </div>
-                    </div>
-
-                    {/* Betting Controls */}
-                    <div className="card p-4 mx-auto" style={{ maxWidth: '400px' }}>
-                        {gameState.status === 'betting' ? (
-                            <>
-                                <label className="text-muted mb-2">My Wallet: ${user?.cash?.toFixed(2)}</label>
-                                <div className="input-group mb-3">
-                                    <span className="input-group-text bg-dark text-white border-secondary">$</span>
+                        <div className="bet-input-row">
+                            <div className="bet-field">
+                                <div className="input-field">
+                                    <span className="cash-icon">💰</span>
                                     <input
                                         type="number"
-                                        className="form-control bg-dark text-white border-secondary text-center fw-bold fs-4"
                                         value={betAmount}
-                                        onChange={e => setBetAmount(e.target.value)}
-                                        min="1"
+                                        onChange={e => setBetAmount(parseFloat(e.target.value) || 0)}
+                                        disabled={flipping}
+                                        min="10"
+                                        max="10000"
                                     />
                                 </div>
-                                <div className="d-flex gap-2">
-                                    <button
-                                        className="btn btn-success flex-grow-1 py-3 fw-bold fs-5"
-                                        onClick={() => handlePlaceBet('heads')}
-                                    >
-                                        BET HEADS
-                                    </button>
-                                    <button
-                                        className="btn btn-light flex-grow-1 py-3 fw-bold fs-5"
-                                        onClick={() => handlePlaceBet('tails')}
-                                    >
-                                        BET TAILS
-                                    </button>
-                                </div>
-                                {myBet && (
-                                    <div className="mt-3 text-info">
-                                        You bet ${myBet.amount} on {myBet.side.toUpperCase()}
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="text-muted py-3">
-                                Betting closed. <br /> Good luck!
                             </div>
-                        )}
-                    </div>
-
-                    {/* History */}
-                    <div className="mt-5">
-                        <p className="text-muted mb-2">Recent Outcomes</p>
-                        <div className="d-flex justify-content-center gap-2">
-                            {gameState.history.map((res, i) => (
-                                <div
-                                    key={i}
-                                    className={`badge rounded-circle p-2 ${res === 'heads' ? 'bg-success' : 'bg-light text-dark'}`}
-                                    style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            <div className="quick-btns">
+                                <button
+                                    className="quick-btn"
+                                    onClick={() => adjustBet(0.5)}
+                                    disabled={flipping}
                                 >
-                                    {res.charAt(0).toUpperCase()}
-                                </div>
-                            ))}
+                                    ½
+                                </button>
+                                <button
+                                    className="quick-btn"
+                                    onClick={() => adjustBet(2)}
+                                    disabled={flipping}
+                                >
+                                    2×
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* TAILS Side */}
-                <div className="col-md-3">
-                    <div className="card p-3 h-100 border-light">
-                        <h3 className="text-white text-center">TAILS</h3>
-                        <div className="text-center display-6 mb-3">
-                            <div className="avatar-circle mx-auto mb-2" style={{ width: 60, height: 60, background: '#e0e0e0', color: '#333', border: 'none' }}>T</div>
-                        </div>
-                        <div className="text-center mb-3">
-                            <span className="badge bg-secondary fs-5">Pool: ${gameState.stats.tails}</span>
-                        </div>
-                        <div className="list-group list-group-flush" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                            {gameState.bets.filter(b => b.side === 'tails').map((bet, i) => (
-                                <div key={i} className="list-group-item bg-transparent text-white d-flex justify-content-between">
-                                    <span>{bet.username}</span>
-                                    <span className="text-white fw-bold">${bet.amount}</span>
-                                </div>
-                            ))}
+                    {/* Side Selection */}
+                    <div className="input-group">
+                        <label className="input-label">Choose Your Side</label>
+                        <div className="side-selector">
+                            <div
+                                className={`side-option ${selectedSide === 'heads' ? 'selected heads' : ''}`}
+                                onClick={() => !flipping && setSelectedSide('heads')}
+                            >
+                                <div className="side-option-icon">🟢</div>
+                                <div className="side-option-label">HEADS</div>
+                            </div>
+                            <div
+                                className={`side-option ${selectedSide === 'tails' ? 'selected tails' : ''}`}
+                                onClick={() => !flipping && setSelectedSide('tails')}
+                            >
+                                <div className="side-option-icon">⚪</div>
+                                <div className="side-option-label">TAILS</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Chat Section */}
-            <div className="row mt-4">
-                <div className="col-md-6 mx-auto">
-                    <Chat socket={socket} username={user.username} />
+                    {/* Flip Button */}
+                    <button
+                        className={`flip-button ${flipping ? 'flipping' : ''}`}
+                        onClick={handleFlip}
+                        disabled={flipping}
+                    >
+                        {flipping ? (
+                            <span className="spinner"></span>
+                        ) : (
+                            <>
+                                <span className="btn-glow"></span>
+                                FLIP
+                            </>
+                        )}
+                    </button>
+
+                    {/* Payout Info */}
+                    <div className="payout-info">
+                        <div className="payout-row">
+                            <span>Multiplier</span>
+                            <span className="payout-value">1.98×</span>
+                        </div>
+                        <div className="payout-row">
+                            <span>Potential Win</span>
+                            <span className="payout-value win">
+                                ${(betAmount * 1.98).toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Last Win */}
+                    {lastWin > 0 && (
+                        <div className="last-win">
+                            <span className="win-label">LAST WIN</span>
+                            <span className="win-amount">${lastWin.toFixed(2)}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Game Area (Right) */}
+                <div className="coinflip-game-area">
+                    <div className="game-header">
+                        <h1 className="game-title">🪙 COIN FLIP</h1>
+                        <p className="game-subtitle">50/50 Chance • 1.98× Payout</p>
+                    </div>
+
+                    {/* 3D Coin */}
+                    <div className="coin-stage-solo">
+                        <div className={`coin-3d-solo ${coinState}`}>
+                            <div className="coin-face-solo coin-heads-solo">
+                                <span>H</span>
+                            </div>
+                            <div className="coin-face-solo coin-tails-solo">
+                                <span>T</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Result Display */}
+                    {result && (
+                        <div className={`result-display-solo ${result.won ? 'won' : 'lost'}`}>
+                            <div className="result-icon">
+                                {result.won ? '🎉' : '😔'}
+                            </div>
+                            <div className="result-text-solo">
+                                {result.won ? 'YOU WON!' : 'YOU LOST'}
+                            </div>
+                            <div className="result-details">
+                                Coin landed on <strong>{result.flipResult.toUpperCase()}</strong>
+                            </div>
+                            {result.won && (
+                                <div className="result-payout">
+                                    +${result.payout.toFixed(2)}
+                                </div>
+                            )}
+                            <button className="play-again-btn" onClick={resetGame}>
+                                Play Again
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Instructions when idle */}
+                    {coinState === 'idle' && !result && (
+                        <div className="game-instructions">
+                            <p>Choose your side and bet amount</p>
+                            <p>Click <strong>FLIP</strong> to test your luck!</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

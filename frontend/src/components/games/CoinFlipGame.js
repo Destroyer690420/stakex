@@ -1,117 +1,214 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import { AuthContext } from '../../context/AuthContext';
-
-let socket;
+import { supabase } from '../../services/supabase';
+import toast, { Toaster } from 'react-hot-toast';
+import './CoinFlip.css';
 
 const CoinFlipGame = () => {
     const { gameId } = useParams();
     const { user, refreshUser } = useContext(AuthContext);
     const navigate = useNavigate();
 
-    const [gameData, setGameData] = useState(null); // { creator, joiner }
-    const [status, setStatus] = useState('waiting'); // waiting, spinning, result
-    const [result, setResult] = useState(null); // 'heads', 'tails'
-    const [winnerId, setWinnerId] = useState(null);
-    const [countdown, setCountdown] = useState(0);
+    const [room, setRoom] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [coinState, setCoinState] = useState('idle');
+    const [battleResult, setBattleResult] = useState(null);
 
+    // Fetch room data
     useEffect(() => {
-        const socketUrl = 'http://localhost:5000/coinflip';
-        socket = io(socketUrl);
+        if (!gameId) {
+            navigate('/games/coinflip');
+            return;
+        }
 
-        socket.on('connect', () => {
-            console.log('Connected to CoinFlip Arena');
-            socket.emit('join_lobby', { id: user.id, username: user.username });
-            // Should verify if we are part of this game, or allow spectators
-            // For MVP, we just rely on game_started events or lobby state?
-            // Ideally, we fetch game state on load. 
-            // BUT: We don't have a fetch endpoint.
-            // Let's implement a 'get_game_state' socket event or just wait for pushed events.
-            // If we navigated here from Lobby, we might expect 'game_started' has fired or will fire.
-            // If creator: We are waiting.
-            // If joiner: We are waiting for 'game_started'.
+        fetchRoom();
 
-            // NOTE: If we refresh page, we lose state. MVP limitation.
-            // Workaround: Ask server for state.
-            socket.emit('join_game', { gameId }); // Re-join logic for spectators? no, that triggers deduction.
-            // Let's rely on 'game_started' being broadcast to room 'gameId'.
-            // Actually, `create_game` joins the socket room. `join_game` joins the socket room.
-            // We need to re-join the socket room if we refreshed.
-            // For now: Assume no refresh.
-        });
-
-        socket.on('game_started', (data) => {
-            setGameData(data); // { creator, joiner }
-            setStatus('spinning');
-            // Animation triggers automatically via CSS based on status 'spinning'
-        });
-
-        socket.on('game_ended', ({ result, winnerId, payout }) => {
-            setResult(result);
-            setWinnerId(winnerId);
-            setStatus('result');
-            refreshUser(); // Update balance
-
-            setCountdown(5);
-            const interval = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(interval);
-                        navigate('/games/coinflip'); // Back to lobby
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        });
+        // Subscribe to room updates
+        const channel = supabase
+            .channel(`coinflip_room_${gameId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'coinflip_rooms',
+                    filter: `id=eq.${gameId}`
+                },
+                (payload) => {
+                    handleRoomUpdate(payload.new);
+                }
+            )
+            .subscribe();
 
         return () => {
-            socket.disconnect();
+            supabase.removeChannel(channel);
         };
-    }, [gameId, user, navigate, refreshUser]);
+    }, [gameId]);
+
+    const fetchRoom = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('coinflip_rooms')
+                .select('*')
+                .eq('id', gameId)
+                .single();
+
+            if (error) throw error;
+
+            setRoom(data);
+
+            // If game is already finished, show result
+            if (data.status === 'finished') {
+                setCoinState(`result-${data.flip_result}`);
+                setBattleResult({
+                    flipResult: data.flip_result,
+                    winnerId: data.winner_id,
+                    isWinner: data.winner_id === user.id
+                });
+            } else if (data.status === 'playing') {
+                // Game in progress - animate
+                setCoinState('spinning');
+            }
+        } catch (error) {
+            console.error('Error fetching room:', error);
+            toast.error('Game not found');
+            navigate('/games/coinflip');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRoomUpdate = (updatedRoom) => {
+        setRoom(updatedRoom);
+
+        if (updatedRoom.status === 'playing' && coinState === 'idle') {
+            setCoinState('spinning');
+        }
+
+        if (updatedRoom.status === 'finished' && !battleResult) {
+            // Animate coin landing
+            setTimeout(() => {
+                setCoinState(`result-${updatedRoom.flip_result}`);
+
+                setTimeout(() => {
+                    setBattleResult({
+                        flipResult: updatedRoom.flip_result,
+                        winnerId: updatedRoom.winner_id,
+                        isWinner: updatedRoom.winner_id === user.id
+                    });
+                    refreshUser();
+                }, 1000);
+            }, 500);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="coinflip-wrapper">
+                <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <div>Loading battle...</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!room) {
+        return (
+            <div className="coinflip-wrapper">
+                <div className="empty-state">
+                    <div className="empty-state-icon">❌</div>
+                    <div className="empty-state-text">Game not found</div>
+                    <button className="create-btn" onClick={() => navigate('/games/coinflip')}>
+                        Back to Lobby
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const creatorSide = room.creator_side;
+    const challengerSide = creatorSide === 'heads' ? 'tails' : 'heads';
+    const pot = room.bet_amount * 2;
 
     return (
-        <div className="container py-5 text-center">
-            {status === 'waiting' && <h2 className="text-white animate-pulse">Waiting for opponent...</h2>}
+        <div className="coinflip-wrapper">
+            <Toaster position="top-center" />
 
-            {gameData && (
-                <div className="d-flex justify-content-center align-items-center gap-5 my-5">
-                    {/* Player A */}
-                    <div className={`player-card ${winnerId === gameData.creator.id ? 'winner-glow' : ''}`}>
-                        <div className="avatar-circle mb-3 mx-auto" style={{ width: '80px', height: '80px', fontSize: '2rem' }}>
-                            {gameData.creator.username.charAt(0).toUpperCase()}
+            <div className="battle-arena">
+                <div className="battle-header">
+                    <h1 className="battle-title">⚔️ BATTLE ARENA ⚔️</h1>
+                    <div className="battle-pot">Total Pot: ${pot.toFixed(2)}</div>
+                </div>
+
+                <div className="players-container">
+                    {/* Creator */}
+                    <div className={`player-card ${battleResult ? (battleResult.winnerId === room.creator_id ? 'winner' : 'loser') : ''}`}>
+                        <div className={`player-avatar ${creatorSide}`}>
+                            {room.creator_username?.charAt(0).toUpperCase()}
                         </div>
-                        <h4 className="text-white">{gameData.creator.username}</h4>
-                        <p className="text-muted">{gameData.creator.side.toUpperCase()}</p>
+                        <div className="player-name">{room.creator_username}</div>
+                        <div className="player-side">{creatorSide}</div>
                     </div>
 
-                    {/* COIN */}
-                    <div className="coin-container">
-                        <div className={`coin ${status === 'spinning' ? 'flipping' : ''} ${status === 'result' ? result : ''}`}>
-                            <div className="side-a"></div>
-                            <div className="side-b"></div>
-                        </div>
-                    </div>
+                    <div className="vs-text">VS</div>
 
-                    {/* Player B */}
-                    <div className={`player-card ${winnerId === gameData.joiner.id ? 'winner-glow' : ''}`}>
-                        <div className="avatar-circle mb-3 mx-auto" style={{ width: '80px', height: '80px', fontSize: '2rem', background: '#00d9a6' }}>
-                            {gameData.joiner.username.charAt(0).toUpperCase()}
+                    {/* Challenger */}
+                    <div className={`player-card ${battleResult ? (battleResult.winnerId === room.challenger_id ? 'winner' : 'loser') : ''}`}>
+                        <div className={`player-avatar ${challengerSide}`}>
+                            {room.challenger_username?.charAt(0).toUpperCase() || '?'}
                         </div>
-                        <h4 className="text-white">{gameData.joiner.username}</h4>
-                        <p className="text-muted">{gameData.creator.side === 'heads' ? 'TAILS' : 'HEADS'}</p>
+                        <div className="player-name">
+                            {room.challenger_username || 'Waiting...'}
+                        </div>
+                        <div className="player-side">{challengerSide}</div>
                     </div>
                 </div>
-            )}
 
-            {status === 'result' && (
-                <div className="mt-5">
-                    <h1 className="fw-bold display-3" style={{ color: winnerId === user.id ? '#00e701' : '#e94560' }}>
-                        {winnerId === user.id ? 'YOU WON!' : 'YOU LOST'}
-                    </h1>
-                    <p className="text-muted">Returning to lobby in {countdown}...</p>
+                {/* 3D Coin */}
+                <div className="coin-stage">
+                    <div className={`coin-3d ${coinState}`}>
+                        <div className="coin-face coin-heads">H</div>
+                        <div className="coin-face coin-tails">T</div>
+                    </div>
                 </div>
-            )}
+
+                {/* Waiting State */}
+                {room.status === 'waiting' && (
+                    <div style={{ color: '#7a8599', textAlign: 'center', marginTop: '24px' }}>
+                        Waiting for opponent to join...
+                    </div>
+                )}
+
+                {/* Spinning State */}
+                {coinState === 'spinning' && !battleResult && (
+                    <div style={{ color: '#7a8599', textAlign: 'center', marginTop: '24px' }}>
+                        Flipping the coin...
+                    </div>
+                )}
+
+                {/* Result */}
+                {battleResult && (
+                    <div className={`result-display ${battleResult.isWinner ? 'won' : 'lost'}`}>
+                        <div className="result-text">
+                            {battleResult.isWinner ? '🎉 YOU WON!' : '😔 YOU LOST'}
+                        </div>
+                        {battleResult.isWinner && (
+                            <div className="result-amount">
+                                +${(pot * 0.99).toFixed(2)}
+                            </div>
+                        )}
+                        <button
+                            className="create-btn"
+                            style={{ marginTop: '24px' }}
+                            onClick={() => navigate('/games/coinflip')}
+                        >
+                            Back to Lobby
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

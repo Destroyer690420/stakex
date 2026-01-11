@@ -19,7 +19,7 @@ const AdminRoute = ({ children }) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (!user?.isAdmin) {
+    if (!user?.is_admin) {
         return <Navigate to="/dashboard" replace />;
     }
 

@@ -3,11 +3,13 @@ import Slots from '../components/games/Slots';
 
 const SlotsGame = () => {
     return (
-        <div className="container py-5">
-            <h2 className="text-white mb-4 text-center">🎰 Mystic Slots</h2>
-            <div className="card p-5" style={{ minHeight: '500px' }}>
-                <Slots />
-            </div>
+        <div style={{
+            marginTop: '-1rem',
+            marginLeft: '-12px',
+            marginRight: '-12px',
+            minHeight: 'calc(100vh - 60px)'
+        }}>
+            <Slots />
         </div>
     );
 };
