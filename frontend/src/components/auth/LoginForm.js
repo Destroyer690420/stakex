@@ -34,10 +34,10 @@ const LoginForm = ({ onSuccess }) => {
 
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                    <label className="form-label">Email</label>
+                    <label className="auth-label">Email</label>
                     <input
                         type="email"
-                        className="form-control"
+                        className="auth-input w-100"
                         placeholder="Enter your email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -45,11 +45,11 @@ const LoginForm = ({ onSuccess }) => {
                     />
                 </div>
 
-                <div className="mb-3">
-                    <label className="form-label">Password</label>
+                <div className="mb-4">
+                    <label className="auth-label">Password</label>
                     <input
                         type="password"
-                        className="form-control"
+                        className="auth-input w-100"
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -59,7 +59,7 @@ const LoginForm = ({ onSuccess }) => {
 
                 <button
                     type="submit"
-                    className="btn btn-primary w-100 mb-3"
+                    className="btn-gold w-100 mb-3"
                     disabled={loading}
                 >
                     {loading ? (

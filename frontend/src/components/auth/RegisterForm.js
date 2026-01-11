@@ -46,10 +46,10 @@ const RegisterForm = ({ onSuccess }) => {
 
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                    <label className="form-label">Username</label>
+                    <label className="auth-label">Username</label>
                     <input
                         type="text"
-                        className="form-control"
+                        className="auth-input w-100"
                         placeholder="Choose a username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
@@ -60,10 +60,10 @@ const RegisterForm = ({ onSuccess }) => {
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label">Email</label>
+                    <label className="auth-label">Email</label>
                     <input
                         type="email"
-                        className="form-control"
+                        className="auth-input w-100"
                         placeholder="Enter your email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -72,10 +72,10 @@ const RegisterForm = ({ onSuccess }) => {
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label">Password</label>
+                    <label className="auth-label">Password</label>
                     <input
                         type="password"
-                        className="form-control"
+                        className="auth-input w-100"
                         placeholder="Create a password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -84,11 +84,11 @@ const RegisterForm = ({ onSuccess }) => {
                     />
                 </div>
 
-                <div className="mb-3">
-                    <label className="form-label">Confirm Password</label>
+                <div className="mb-4">
+                    <label className="auth-label">Confirm Password</label>
                     <input
                         type="password"
-                        className="form-control"
+                        className="auth-input w-100"
                         placeholder="Confirm your password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -98,7 +98,7 @@ const RegisterForm = ({ onSuccess }) => {
 
                 <button
                     type="submit"
-                    className="btn btn-primary w-100 mb-3"
+                    className="btn-gold w-100 mb-3"
                     disabled={loading}
                 >
                     {loading ? (

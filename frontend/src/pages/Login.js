@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import LoginForm from '../components/auth/LoginForm';
+import './Auth.css';
 
 const Login = () => {
     const { isAuthenticated } = useContext(AuthContext);
@@ -15,32 +16,32 @@ const Login = () => {
     }, [isAuthenticated, navigate]);
 
     return (
-        <div className="row justify-content-center mt-5">
-            <div className="col-md-5">
-                <div className="card p-4">
+        <div className="auth-page">
+            <div className="col-md-5" style={{ maxWidth: '480px', width: '100%' }}>
+                <div className="auth-card p-4">
                     <div className="text-center mb-4">
-                        <h1 className="h3">
-                            🎰 <span style={{ color: '#ffd700' }}>Stake</span>
-                            <span style={{ color: '#e94560' }}>X</span>
+                        <h1 className="h3 mb-2">
+                            <span style={{ color: '#fff', fontWeight: 'bold' }}>Stake</span>
+                            <span style={{ color: '#d4af37', fontWeight: 'bold' }}>X</span>
                         </h1>
-                        <p className="text-muted">Sign in to play</p>
+                        <p className="auth-subtitle">Sign in to play</p>
                     </div>
 
                     <LoginForm onSuccess={() => navigate('/dashboard')} />
 
-                    <div className="text-center">
-                        <p className="mb-0">
+                    <div className="text-center mt-3">
+                        <p className="mb-0 text-muted" style={{ fontSize: '14px' }}>
                             Don't have an account?{' '}
-                            <Link to="/register" className="text-decoration-none" style={{ color: '#e94560' }}>
+                            <Link to="/register" className="link-gold">
                                 Sign up
                             </Link>
                         </p>
                     </div>
 
-                    <hr className="my-4" style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+                    <div className="auth-divider"></div>
 
-                    <p className="text-center text-muted small mb-0">
-                        ⚠️ This is a simulation. No real money involved.
+                    <p className="text-center text-muted small mb-0" style={{ fontSize: '12px' }}>
+                        This is a simulation. No real money involved.
                     </p>
                 </div>
             </div>

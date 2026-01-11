@@ -1,0 +1,122 @@
+/* ========================================
+   AUTH PAGES - PREMIUM STAKEX THEME
+   Dark Gold/Black Stake Style
+   ======================================== */
+
+/* Auth Layout */
+.auth-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Auth Card */
+.auth-card {
+    background: linear-gradient(145deg, #1a1a1a 0%, #0f0f0f 100%);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Headers */
+.auth-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    color: #7a8599;
+    font-size: 14px;
+}
+
+/* Form Elements */
+.auth-label {
+    font-size: 12px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.auth-input {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    color: #fff;
+    height: 50px;
+    padding: 0 16px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.auth-input:focus {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: #d4af37;
+    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
+    color: #fff;
+}
+
+.auth-input::placeholder {
+    color: #555;
+}
+
+/* Buttons */
+.btn-gold {
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    border: none;
+    border-radius: 12px;
+    color: #000;
+    font-size: 16px;
+    font-weight: 700;
+    height: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+.btn-gold:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+    color: #000;
+}
+
+.btn-gold:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: #555;
+}
+
+/* Links */
+.link-gold {
+    color: #d4af37 !important;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.link-gold:hover {
+    color: #f0d78c !important;
+    text-decoration: underline;
+}
+
+/* Dividers */
+.auth-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin: 24px 0;
+}
+
+/* Alerts */
+.alert-danger {
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    color: #ff4757;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+}
