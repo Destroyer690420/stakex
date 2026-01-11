@@ -15,8 +15,8 @@ const PokerGame = () => {
     const [raiseAmount, setRaiseAmount] = useState(0);
 
     useEffect(() => {
-        const socketUrl = 'http://localhost:5000/poker';
-        socket = io(socketUrl, {
+        const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+        socket = io(`${socketUrl}/poker`, {
             auth: { token: localStorage.getItem('token') } // Assuming JWT stored in localstorage
         });
 
