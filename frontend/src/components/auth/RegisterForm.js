@@ -30,7 +30,7 @@ const RegisterForm = ({ onSuccess }) => {
             await register(username, email, password);
             if (onSuccess) onSuccess();
         } catch (err) {
-            setError(err.message || err.response?.data?.message || 'Registration failed. Please try again.');
+            setError(err.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }

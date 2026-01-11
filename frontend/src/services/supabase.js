@@ -3,15 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-// Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables. Check REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY');
+    console.warn('Supabase credentials not found in environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-    }
-});
+export const supabase = createClient(
+    supabaseUrl || '',
+    supabaseAnonKey || ''
+);
+
+export default supabase;

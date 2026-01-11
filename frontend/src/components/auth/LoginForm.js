@@ -18,7 +18,7 @@ const LoginForm = ({ onSuccess }) => {
             // Determine user role or successful login action if needed
             if (onSuccess) onSuccess();
         } catch (err) {
-            setError(err.message || err.response?.data?.message || 'Login failed. Please try again.');
+            setError(err.response?.data?.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
