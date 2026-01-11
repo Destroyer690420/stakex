@@ -602,30 +602,42 @@
 
 @media (max-width: 768px) {
     .slots-wrapper {
-        min-height: auto;
+        min-height: calc(100vh - 65px);
+        /* Exact height to fit minus navbar */
         padding: 10px;
-        padding-top: 10px;
+        padding-top: 30px;
+        /* Extra spacing from navbar */
     }
 }
 
 @media (max-width: 480px) {
     .slots-wrapper {
-        padding: 8px;
-        padding-top: 8px;
+        padding: 10px;
+        padding-top: 10px;
+        /* Reset manual padding, rely on main-content but ensure gap */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        min-height: auto;
+    }
+
+    /* Force spacing from fixed navbar */
+    .slots-container {
+        margin-top: 10px;
     }
 
     .slots-panel {
-        padding: 14px;
-        gap: 12px;
+        padding: 12px;
+        gap: 10px;
     }
 
     .slots-machine {
-        padding: 14px;
+        padding: 12px;
     }
 
     .reels-container {
         gap: 6px;
-        padding: 10px;
+        padding: 8px;
     }
 
     .reel {
@@ -652,19 +664,25 @@
     }
 
     .paytable {
-        padding: 10px;
+        padding: 8px;
     }
 
     .paytable-row {
-        font-size: 12px;
-        padding: 6px 0;
+        font-size: 11px;
+        padding: 4px 0;
     }
 
     .input-label {
-        font-size: 11px;
+        font-size: 10px;
     }
 
     .balance-tag {
-        font-size: 11px;
+        font-size: 10px;
+    }
+
+    /* Fix footer spacing */
+    .footer-info {
+        font-size: 10px;
+        margin-bottom: 20px;
     }
 }
