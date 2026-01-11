@@ -600,34 +600,71 @@
     }
 }
 
+@media (max-width: 768px) {
+    .slots-wrapper {
+        min-height: auto;
+        padding: 10px;
+        padding-top: 10px;
+    }
+}
+
 @media (max-width: 480px) {
     .slots-wrapper {
-        padding: 12px;
+        padding: 8px;
+        padding-top: 8px;
     }
 
     .slots-panel {
-        padding: 16px;
+        padding: 14px;
+        gap: 12px;
     }
 
     .slots-machine {
-        padding: 16px;
+        padding: 14px;
     }
 
     .reels-container {
-        gap: 8px;
-        padding: 12px;
+        gap: 6px;
+        padding: 10px;
     }
 
     .reel {
-        width: 70px;
-        height: 90px;
+        width: 65px;
+        height: 80px;
     }
 
     .symbol {
-        font-size: 36px;
+        font-size: 32px;
     }
 
     .machine-title {
-        font-size: 20px;
+        font-size: 18px;
+    }
+
+    .input-field {
+        height: 44px;
+        padding: 0 10px;
+    }
+
+    .bet-button {
+        height: 48px;
+        font-size: 16px;
+    }
+
+    .paytable {
+        padding: 10px;
+    }
+
+    .paytable-row {
+        font-size: 12px;
+        padding: 6px 0;
+    }
+
+    .input-label {
+        font-size: 11px;
+    }
+
+    .balance-tag {
+        font-size: 11px;
     }
 }
