@@ -68,9 +68,6 @@ const corsOptions = {
 // Apply CORS first
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
-
 // Then helmet with relaxed settings
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
