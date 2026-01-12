@@ -5,7 +5,8 @@
 
 /* Wrapper with gradient background */
 .mines-wrapper {
-    min-height: calc(100vh - 80px);
+    flex: 1;
+    min-height: calc(100vh - 64px);
     background: linear-gradient(135deg, #0A0F1A 0%, #151C2C 50%, #0A0F1A 100%);
     position: relative;
     overflow: hidden;

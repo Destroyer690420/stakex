@@ -1,36 +1,48 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const RegisterForm = ({ onSuccess }) => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { register } = useContext(AuthContext);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            toast.error('Passwords do not match');
             return;
         }
 
         if (password.length < 6) {
-            setError('Password must be at least 6 characters');
+            toast.error('Password must be at least 6 characters');
             return;
         }
 
         setLoading(true);
 
         try {
-            await register(username, email, password);
-            if (onSuccess) onSuccess();
+            const result = await register(username, email, password);
+
+            if (result.emailConfirmationRequired) {
+                // Email confirmation required - show success message and clear form
+                toast.success('Account created! Please check your email to verify your account before logging in.');
+                setUsername('');
+                setEmail('');
+                setPassword('');
+                setConfirmPassword('');
+                // Don't redirect - let user read the message
+            } else {
+                // Direct login successful
+                if (onSuccess) onSuccess();
+            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            const message = err.message || 'Registration failed. Please try again.';
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -38,12 +50,6 @@ const RegisterForm = ({ onSuccess }) => {
 
     return (
         <>
-            {error && (
-                <div className="alert alert-danger" role="alert">
-                    {error}
-                </div>
-            )}
-
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                     <label className="auth-label">Username</label>

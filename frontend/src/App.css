@@ -20,6 +20,9 @@ body {
     min-height: 100vh;
     width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Reduce padding on mobile */

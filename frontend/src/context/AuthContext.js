@@ -39,8 +39,8 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
+        setError(null);
         try {
-            setError(null);
             const response = await api.post('/auth/login', { email, password });
 
             if (response.data.success) {
@@ -49,30 +49,36 @@ export const AuthProvider = ({ children }) => {
                 setUser(response.data.user);
                 return { success: true };
             }
-            return { success: false, message: response.data.message };
+            // Throw error so form can catch and display toast
+            throw new Error(response.data.message || 'Login failed');
         } catch (err) {
-            const message = err.response?.data?.message || 'Login failed';
+            const message = err.response?.data?.message || err.message || 'Login failed';
             setError(message);
-            return { success: false, message };
+            throw new Error(message);
         }
     };
 
     const register = async (username, email, password) => {
+        setError(null);
         try {
-            setError(null);
             const response = await api.post('/auth/register', { username, email, password });
 
             if (response.data.success) {
+                // Check if email confirmation is required (no token returned)
+                if (!response.data.token) {
+                    return { success: true, emailConfirmationRequired: true };
+                }
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('refreshToken', response.data.refreshToken);
                 setUser(response.data.user);
-                return { success: true };
+                return { success: true, emailConfirmationRequired: false };
             }
-            return { success: false, message: response.data.message };
+            // Throw error so form can catch and display toast
+            throw new Error(response.data.message || 'Registration failed');
         } catch (err) {
-            const message = err.response?.data?.message || 'Registration failed';
+            const message = err.response?.data?.message || err.message || 'Registration failed';
             setError(message);
-            return { success: false, message };
+            throw new Error(message);
         }
     };
 
@@ -89,7 +95,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const updateUser = (updatedUser) => {
-        setUser(updatedUser);
+        setUser(prev => prev ? { ...prev, ...updatedUser } : updatedUser);
     };
 
     const refreshUser = async () => {

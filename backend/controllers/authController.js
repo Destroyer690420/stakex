@@ -65,6 +65,15 @@ exports.register = async (req, res) => {
             });
         }
 
+        // IMPORTANT: Supabase returns success for duplicate emails to prevent enumeration
+        // When email already exists, the user object has an empty identities array
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already registered'
+            });
+        }
+
         // Wait briefly for the trigger to create the user profile
         await new Promise(resolve => setTimeout(resolve, 500));
 

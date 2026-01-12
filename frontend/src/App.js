@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -20,6 +21,16 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: '#1a2c38',
+            color: '#fff',
+            border: '1px solid #00e701'
+          }
+        }}
+      />
       <Router>
         <div className="App">
           <Navbar />

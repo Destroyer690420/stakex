@@ -4,7 +4,8 @@
    ======================================== */
 
 .roulette-container {
-    min-height: 100vh;
+    flex: 1;
+    min-height: calc(100vh - 64px);
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
     padding: 20px;
     color: #fff;

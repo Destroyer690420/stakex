@@ -5,7 +5,8 @@
 
 /* Wrapper */
 .slots-wrapper {
-    min-height: calc(100vh - 80px);
+    flex: 1 1;
+    min-height: calc(102vh - 64px);
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
     position: relative;
     overflow: hidden;
@@ -47,6 +48,7 @@
     flex-direction: column;
     gap: 16px;
     position: relative;
+    margin-top: 30px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -602,28 +604,29 @@
 
 @media (max-width: 768px) {
     .slots-wrapper {
-        min-height: calc(100vh - 65px);
-        /* Exact height to fit minus navbar */
+        height: 100%;
+        min-height: 100%;
         padding: 10px;
         padding-top: 30px;
-        /* Extra spacing from navbar */
     }
 }
 
 @media (max-width: 480px) {
     .slots-wrapper {
+        height: 100%;
+        min-height: 102vh;
         padding: 10px;
         padding-top: 10px;
-        /* Reset manual padding, rely on main-content but ensure gap */
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
-        min-height: auto;
     }
 
     /* Force spacing from fixed navbar */
     .slots-container {
         margin-top: 10px;
+        margin-bottom: 20px;
+        /* Add bottom margin to ensure scrolling past footer works */
     }
 
     .slots-panel {
@@ -633,6 +636,7 @@
 
     .slots-machine {
         padding: 12px;
+        margin-top: 20px;
     }
 
     .reels-container {
