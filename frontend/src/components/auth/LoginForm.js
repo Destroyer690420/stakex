@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -48,7 +49,7 @@ const LoginForm = ({ onSuccess }) => {
                 />
             </div>
 
-            <div className="mb-4">
+            <div className="mb-3">
                 <label className="auth-label">Password</label>
                 <input
                     type="password"
@@ -58,6 +59,12 @@ const LoginForm = ({ onSuccess }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                 />
+            </div>
+
+            <div className="mb-4 text-end">
+                <Link to="/forgot-password" className="forgot-password-link">
+                    Forgot Password?
+                </Link>
             </div>
 
             <button

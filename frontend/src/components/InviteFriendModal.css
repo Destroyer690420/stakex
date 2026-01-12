@@ -1,0 +1,164 @@
+/* ========================================
+   INVITE FRIEND MODAL STYLES
+   ======================================== */
+
+.invite-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.invite-modal {
+    background: linear-gradient(145deg, #1a1a1a 0%, #0f0f0f 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.invite-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.invite-modal-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+.close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+    background: rgba(255, 71, 87, 0.3);
+    color: #ff4757;
+}
+
+.invite-modal-content {
+    padding: 20px 24px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.invite-loading,
+.invite-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #7a8599;
+}
+
+.invite-empty .empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.invite-empty .hint {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.friends-invite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.invite-friend-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.invite-friend-card:hover {
+    border-color: rgba(212, 175, 55, 0.2);
+}
+
+.invite-friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+}
+
+.invite-friend-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.invite-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.invite-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.invite-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Scrollbar */
+.invite-modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.invite-modal-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.invite-modal-content::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.3);
+    border-radius: 3px;
+}

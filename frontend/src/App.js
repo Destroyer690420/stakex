@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import SlotsGame from './pages/SlotsGame';
@@ -12,7 +14,10 @@ import CoinFlipGame from './components/games/CoinFlipGame';
 import PokerGame from './components/games/PokerGame';
 import Roulette from './components/games/Roulette';
 import Mines from './components/games/Mines';
+import Aviator from './components/games/Aviator';
 import Profile from './pages/Profile';
+import Friends from './pages/Friends';
+import Leaderboard from './pages/Leaderboard';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
@@ -38,6 +43,8 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route
                 path="/dashboard"
                 element={
@@ -99,6 +106,30 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Mines />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/aviator"
+                element={
+                  <PrivateRoute>
+                    <Aviator />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/friends"
+                element={
+                  <PrivateRoute>
+                    <Friends />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <PrivateRoute>
+                    <Leaderboard />
                   </PrivateRoute>
                 }
               />

@@ -127,6 +127,7 @@ app.use((err, req, res, next) => {
 // Socket.io connection handling
 require('./socket/poker')(io);
 require('./socket/coinflip')(io);
+require('./socket/crashLoop')(io);
 
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
