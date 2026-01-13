@@ -273,6 +273,11 @@ async function handleCrash(crashPoint) {
         await supabase.rpc('fn_settle_crash_round', {
             p_round_id: round.id
         });
+
+        // Broadcast updated history to all connected players
+        const { data: history } = await supabase.rpc('fn_get_crash_history', { p_limit: 20 });
+        io.to('aviator').emit('history', history || []);
+        console.log('📊 [Aviator] Broadcast updated history to all players');
     } catch (err) {
         console.error('Error settling crash round:', err);
     }
