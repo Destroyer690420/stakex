@@ -4,20 +4,33 @@
    Mobile-first with proper desktop layout
    ======================================== */
 
+/* Global box-sizing for all aviator elements */
+.aviator-wrapper,
+.aviator-wrapper *,
+.aviator-wrapper *::before,
+.aviator-wrapper *::after {
+    box-sizing: border-box;
+}
+
 .aviator-wrapper {
     flex: 1;
     min-height: calc(100vh - 64px);
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
     padding: 8px;
     color: #fff;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
 }
 
 .aviator-container {
     max-width: 1600px;
+    width: 100%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-x: hidden;
 }
 
 /* ===== HEADER ===== */
@@ -83,6 +96,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 /* ===== GAME AREA ===== */
@@ -510,6 +526,9 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .bet-panel {
@@ -517,11 +536,15 @@
     border: 1px solid rgba(212, 175, 55, 0.15);
     border-radius: 12px;
     padding: 12px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 /* Amount input row */
 .bet-amount-row {
     margin-bottom: 10px;
+    width: 100%;
 }
 
 .amount-input-box {
@@ -531,6 +554,7 @@
     border: 2px solid rgba(100, 110, 140, 0.3);
     border-radius: 8px;
     overflow: hidden;
+    width: 100%;
 }
 
 .amount-input-box input {
@@ -579,21 +603,27 @@
 /* Quick amount buttons */
 .quick-amounts {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
     margin-bottom: 10px;
+    width: 100%;
 }
 
 .quick-amount-btn {
-    height: 40px;
+    height: 36px;
     background: rgba(100, 110, 140, 0.15);
     border: 1px solid rgba(100, 110, 140, 0.25);
     border-radius: 6px;
     color: #b0b8c8;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
+    padding: 0 2px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .quick-amount-btn:hover:not(:disabled) {
@@ -615,7 +645,9 @@
 .action-buttons {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 8px;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* Auto cashout toggle button */
@@ -1078,6 +1110,27 @@
 .bets-list::-webkit-scrollbar-thumb {
     background: rgba(212, 175, 55, 0.3);
     border-radius: 2px;
+}
+
+/* ============================================
+   SMALL MOBILE (under 400px)
+   Use 2 rows of 3 columns for quick amounts
+   ============================================ */
+@media (max-width: 400px) {
+    .quick-amounts {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, auto);
+        gap: 6px;
+    }
+
+    .quick-amount-btn {
+        height: 38px;
+        font-size: 13px;
+    }
+
+    .aviator-header h1 {
+        font-size: 1rem;
+    }
 }
 
 /* ============================================
