@@ -64,9 +64,7 @@ const Profile = ({ showTransactions = true, compact = false }) => {
         return 'text-danger'; // Red
     };
 
-    const getTypeIcon = (type) => {
-        return '';
-    };
+
 
     return (
         <div className="profile-container">

@@ -8,7 +8,6 @@ import './AdminDashboard.css';
 const AdminDashboard = () => {
     const { user } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('stats');
-    const [loading, setLoading] = useState(false);
 
     // Stats State
     const [stats, setStats] = useState(null);
@@ -42,6 +41,7 @@ const AdminDashboard = () => {
         if (activeTab === 'users') {
             fetchUsers();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, pagination.page, searchQuery]);
 
     // Fetch transactions when tab changes

@@ -37,30 +37,9 @@ const DiceGame = () => {
         }
     };
 
-    // Handle multiplier change (updates target)
-    const handleMultiplierChange = (value) => {
-        const mult = parseFloat(value);
-        if (mult > 1 && mult <= 9900) {
-            const newWinChance = 99 / mult;
-            if (isOver) {
-                handleTargetChange(99.99 - newWinChance);
-            } else {
-                handleTargetChange(newWinChance);
-            }
-        }
-    };
 
-    // Handle win chance change (updates target)
-    const handleWinChanceChange = (value) => {
-        const chance = parseFloat(value);
-        if (chance > 0 && chance < 100) {
-            if (isOver) {
-                handleTargetChange(99.99 - chance);
-            } else {
-                handleTargetChange(chance);
-            }
-        }
-    };
+
+
 
     // Adjust bet
     const adjustBet = (multiplierFactor) => {

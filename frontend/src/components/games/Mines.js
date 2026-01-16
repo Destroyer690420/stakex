@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import './Mines.css';
@@ -18,7 +18,7 @@ const Mines = () => {
 
     // Grid state
     const [grid, setGrid] = useState(Array(GRID_SIZE).fill({ revealed: false, isMine: false, isGem: false }));
-    const [minePositions, setMinePositions] = useState([]);
+
 
     // Multiplier state
     const [currentMultiplier, setCurrentMultiplier] = useState(1.0);
@@ -85,7 +85,7 @@ const Mines = () => {
                 setNextMultiplier(res.data.nextMultiplier);
                 setRevealedCount(0);
                 setGrid(Array(GRID_SIZE).fill(null).map(() => ({ revealed: false, isMine: false, isGem: false })));
-                setMinePositions([]);
+                setGrid(Array(GRID_SIZE).fill(null).map(() => ({ revealed: false, isMine: false, isGem: false })));
                 refreshUser();
             }
         } catch (err) {
@@ -110,7 +110,6 @@ const Mines = () => {
                         newGrid[pos] = { ...newGrid[pos], revealed: true, isMine: true };
                     });
                     setGrid(newGrid);
-                    setMinePositions(res.data.minePositions);
                     setGameStatus('lost');
                     refreshUser();
                 } else if (res.data.result === 'safe') {
@@ -174,7 +173,6 @@ const Mines = () => {
         setGameId(null);
         setGameStatus('idle');
         setGrid(Array(GRID_SIZE).fill(null).map(() => ({ revealed: false, isMine: false, isGem: false })));
-        setMinePositions([]);
         setCurrentMultiplier(1.0);
         setRevealedCount(0);
     };

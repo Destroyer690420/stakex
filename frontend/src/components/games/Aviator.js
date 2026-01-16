@@ -62,7 +62,7 @@ const Aviator = () => {
     const [history, setHistory] = useState([]);
     const [liveBets, setLiveBets] = useState([]);
     const [showExplosion, setShowExplosion] = useState(false);
-    const [planeLoaded, setPlaneLoaded] = useState(false);
+
 
     // Bet states
     const [bet1Amount, setBet1Amount] = useState('10.00');
@@ -90,7 +90,7 @@ const Aviator = () => {
         img.src = '/plane.png';
         img.onload = () => {
             planeImageRef.current = img;
-            setPlaneLoaded(true);
+
         };
     }, []);
 
@@ -486,6 +486,7 @@ const Aviator = () => {
             socketRef.current?.emit('leave_aviator');
             socketRef.current?.disconnect();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [updateUser]);
 
     // Countdown timer
@@ -786,8 +787,7 @@ const Aviator = () => {
     const renderBetPanel = (betNum) => {
         const amount = betNum === 1 ? bet1Amount : bet2Amount;
         const setAmount = betNum === 1 ? setBet1Amount : setBet2Amount;
-        const auto = betNum === 1 ? bet1Auto : bet2Auto;
-        const setAuto = betNum === 1 ? setBet1Auto : setBet2Auto;
+
         const active = betNum === 1 ? bet1Active : bet2Active;
         const cashedOut = betNum === 1 ? bet1CashedOut : bet2CashedOut;
 

@@ -22,6 +22,63 @@ const CoinFlipGame = () => {
             return;
         }
 
+        const handleRoomUpdate = (updatedRoom) => {
+            setRoom(updatedRoom);
+
+            if (updatedRoom.status === 'playing' && coinState === 'idle') {
+                setCoinState('spinning');
+            }
+
+            if (updatedRoom.status === 'finished' && !battleResult) {
+                // Animate coin landing
+                setTimeout(() => {
+                    setCoinState(`result-${updatedRoom.flip_result}`);
+
+                    setTimeout(() => {
+                        setBattleResult({
+                            flipResult: updatedRoom.flip_result,
+                            winnerId: updatedRoom.winner_id,
+                            isWinner: updatedRoom.winner_id === user.id
+                        });
+                        refreshUser();
+                    }, 1000);
+                }, 500);
+            }
+        };
+
+        const fetchRoom = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('coinflip_rooms')
+                    .select('*')
+                    .eq('id', gameId)
+                    .single();
+
+                if (error) throw error;
+
+                setRoom(data);
+
+                // If game is already finished, show result
+                if (data.status === 'finished') {
+                    setCoinState(`result-${data.flip_result}`);
+                    setBattleResult({
+                        flipResult: data.flip_result,
+                        winnerId: data.winner_id,
+                        isWinner: data.winner_id === user.id
+                    });
+                } else if (data.status === 'playing') {
+                    // Game in progress - animate
+                    setCoinState('spinning');
+                }
+            } catch (error) {
+                console.error('Error fetching room:', error);
+                toast.error('Game not found');
+                navigate('/games/coinflip');
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchRoom();
 
         // Subscribe to room updates
@@ -44,64 +101,8 @@ const CoinFlipGame = () => {
         return () => {
             supabase.removeChannel(channel);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameId]);
-
-    const fetchRoom = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('coinflip_rooms')
-                .select('*')
-                .eq('id', gameId)
-                .single();
-
-            if (error) throw error;
-
-            setRoom(data);
-
-            // If game is already finished, show result
-            if (data.status === 'finished') {
-                setCoinState(`result-${data.flip_result}`);
-                setBattleResult({
-                    flipResult: data.flip_result,
-                    winnerId: data.winner_id,
-                    isWinner: data.winner_id === user.id
-                });
-            } else if (data.status === 'playing') {
-                // Game in progress - animate
-                setCoinState('spinning');
-            }
-        } catch (error) {
-            console.error('Error fetching room:', error);
-            toast.error('Game not found');
-            navigate('/games/coinflip');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRoomUpdate = (updatedRoom) => {
-        setRoom(updatedRoom);
-
-        if (updatedRoom.status === 'playing' && coinState === 'idle') {
-            setCoinState('spinning');
-        }
-
-        if (updatedRoom.status === 'finished' && !battleResult) {
-            // Animate coin landing
-            setTimeout(() => {
-                setCoinState(`result-${updatedRoom.flip_result}`);
-
-                setTimeout(() => {
-                    setBattleResult({
-                        flipResult: updatedRoom.flip_result,
-                        winnerId: updatedRoom.winner_id,
-                        isWinner: updatedRoom.winner_id === user.id
-                    });
-                    refreshUser();
-                }, 1000);
-            }, 500);
-        }
-    };
 
     if (loading) {
         return (

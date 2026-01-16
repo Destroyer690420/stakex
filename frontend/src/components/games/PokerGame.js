@@ -144,7 +144,6 @@ const PokerGame = () => {
                             // This positioning logic is naive, needs relative to ME at bottom.
                             // For MVP, just absolute positions by index.
                             const pos = positions[i % 6];
-                            const isMe = player.username === user.username;
                             const isTurn = i === gameState.turnIndex;
 
                             return (
