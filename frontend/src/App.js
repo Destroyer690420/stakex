@@ -15,6 +15,7 @@ import PokerGame from './components/games/PokerGame';
 import Roulette from './components/games/Roulette';
 import Mines from './components/games/Mines';
 import Aviator from './components/games/Aviator';
+import DiceGame from './components/games/DiceGame';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
@@ -114,6 +115,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Aviator />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/dice"
+                element={
+                  <PrivateRoute>
+                    <DiceGame />
                   </PrivateRoute>
                 }
               />

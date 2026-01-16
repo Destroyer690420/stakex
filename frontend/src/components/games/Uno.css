@@ -1,0 +1,1586 @@
+/* ========================================
+   UNO GAME - EXACT REPLICA UI
+   Matching reference image pixel-perfectly
+   ======================================== */
+
+/* ========================================
+   BASE LAYOUT
+   ======================================== */
+.uno-wrapper {
+    min-height: calc(100vh - 70px);
+    background: radial-gradient(ellipse at center, #2c5a7c 0%, #1a3d5c 40%, #0f2840 70%, #0a1a2a 100%);
+    padding: 0;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.uno-container {
+    width: 100%;
+    height: calc(100vh - 70px);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Quit Button - Top Left */
+.uno-quit-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #d32f2f;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 100;
+}
+
+/* ========================================
+   GAME BOARD - 4 PLAYER LAYOUT
+   ======================================== */
+.uno-game-board {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-areas:
+        ". top ."
+        "left center right"
+        ". bottom .";
+    grid-template-columns: 180px 1fr 180px;
+    grid-template-rows: auto 1fr auto;
+    padding: 20px;
+    gap: 10px;
+}
+
+/* ========================================
+   OPPONENT AREAS
+   ======================================== */
+
+/* Top Opponent (Player 3) */
+.uno-opponent-top {
+    grid-area: top;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Left Opponent (Player 2) */
+.uno-opponent-left {
+    grid-area: left;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Right Opponent (Player 4) */
+.uno-opponent-right {
+    grid-area: right;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Opponent Cards Container - Horizontal */
+.uno-opponent-cards-horizontal {
+    display: flex;
+    justify-content: center;
+}
+
+/* Opponent Cards Container - Vertical */
+.uno-opponent-cards-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Opponent Info Bar */
+.uno-opponent-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.uno-opponent-label .score {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.uno-opponent-label .star {
+    color: #a0a0a0;
+}
+
+.uno-opponent-label .player-name {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+/* Active player glow */
+.uno-opponent.active .uno-opponent-cards-horizontal,
+.uno-opponent.active .uno-opponent-cards-vertical {
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6));
+}
+
+/* ========================================
+   CARD BACK DESIGN (Face-down cards)
+   ======================================== */
+
+/* Horizontal card back (for top opponent) */
+.uno-card-back-h {
+    width: 70px;
+    height: 100px;
+    background: linear-gradient(135deg, #2a2a2a 25%, #1a1a1a 25%, #1a1a1a 50%, #2a2a2a 50%, #2a2a2a 75%, #1a1a1a 75%);
+    background-size: 8px 8px;
+    border-radius: 10px;
+    border: 2px solid #444;
+    margin-left: -40px;
+    position: relative;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.uno-card-back-h:first-child {
+    margin-left: 0;
+}
+
+/* 4-color diamond on card back */
+.uno-card-back-h::before,
+.uno-card-back-v::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 38px;
+    height: 38px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.uno-card-back-h::after,
+.uno-card-back-v::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 38px;
+    height: 38px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background:
+        linear-gradient(135deg, #f44336 0%, #f44336 50%, transparent 50%) top left,
+        linear-gradient(225deg, #ffeb3b 0%, #ffeb3b 50%, transparent 50%) top right,
+        linear-gradient(315deg, #2196f3 0%, #2196f3 50%, transparent 50%) bottom right,
+        linear-gradient(45deg, #4caf50 0%, #4caf50 50%, transparent 50%) bottom left;
+    background-size: 50% 50%;
+    background-repeat: no-repeat;
+    border-radius: 4px;
+}
+
+/* Vertical card back (for left/right opponents) */
+.uno-card-back-v {
+    width: 70px;
+    height: 100px;
+    background: linear-gradient(135deg, #2a2a2a 25%, #1a1a1a 25%, #1a1a1a 50%, #2a2a2a 50%, #2a2a2a 75%, #1a1a1a 75%);
+    background-size: 8px 8px;
+    border-radius: 10px;
+    border: 2px solid #444;
+    margin-top: -70px;
+    position: relative;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.uno-card-back-v:first-child {
+    margin-top: 0;
+}
+
+/* ========================================
+   CENTER PLAY AREA
+   ======================================== */
+.uno-center-area {
+    grid-area: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+}
+
+/* Navigation arrows */
+.uno-nav-arrow {
+    width: 32px;
+    height: 32px;
+    background: rgba(100, 100, 180, 0.3);
+    border: 2px solid rgba(100, 100, 180, 0.5);
+    border-radius: 6px;
+    color: rgba(150, 150, 200, 0.8);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Special Mode Badge */
+.uno-special-mode {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-80px);
+    background: linear-gradient(135deg, #5c6bc0 0%, #3949ab 100%);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+/* Turn indicator number */
+.uno-turn-number {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-100px);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.uno-turn-number .number-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg,
+            #f44336 0%, #f44336 25%,
+            #ffeb3b 25%, #ffeb3b 50%,
+            #4caf50 50%, #4caf50 75%,
+            #2196f3 75%, #2196f3 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Current color indicator */
+.uno-color-indicator {
+    position: absolute;
+    right: calc(50% - 100px);
+    width: 28px;
+    height: 28px;
+    transform: rotate(45deg);
+    border-radius: 4px;
+}
+
+.uno-color-indicator.red {
+    background: #f44336;
+}
+
+.uno-color-indicator.blue {
+    background: #2196f3;
+}
+
+.uno-color-indicator.green {
+    background: #4caf50;
+}
+
+.uno-color-indicator.yellow {
+    background: #ffeb3b;
+}
+
+/* Draw and Discard Piles */
+.uno-piles-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Draw Pile */
+.uno-draw-pile {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.uno-draw-pile:hover:not(.disabled) {
+    transform: scale(1.02);
+}
+
+.uno-draw-pile.disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.uno-draw-pile-stack {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 100px;
+    height: 145px;
+    background: linear-gradient(135deg, #2a2a2a 25%, #1a1a1a 25%, #1a1a1a 50%, #2a2a2a 50%, #2a2a2a 75%, #1a1a1a 75%);
+    background-size: 8px 8px;
+    border-radius: 12px;
+    border: 2px solid #444;
+    z-index: -1;
+}
+
+.uno-card-back-large {
+    width: 100px;
+    height: 145px;
+    background: linear-gradient(135deg, #2a2a2a 25%, #1a1a1a 25%, #1a1a1a 50%, #2a2a2a 50%, #2a2a2a 75%, #1a1a1a 75%);
+    background-size: 8px 8px;
+    border-radius: 12px;
+    border: 3px solid #555;
+    position: relative;
+    box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.uno-card-back-large::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 55px;
+    height: 55px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background:
+        linear-gradient(135deg, #f44336 0%, #f44336 50%, transparent 50%) top left,
+        linear-gradient(225deg, #ffeb3b 0%, #ffeb3b 50%, transparent 50%) top right,
+        linear-gradient(315deg, #2196f3 0%, #2196f3 50%, transparent 50%) bottom right,
+        linear-gradient(45deg, #4caf50 0%, #4caf50 50%, transparent 50%) bottom left;
+    background-size: 50% 50%;
+    background-repeat: no-repeat;
+    border-radius: 5px;
+}
+
+/* Discard Pile */
+.uno-discard-pile {
+    position: relative;
+}
+
+/* ========================================
+   FACE-UP CARD DESIGN
+   ======================================== */
+.uno-card {
+    width: 100px;
+    height: 145px;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Card Colors */
+.uno-card.red {
+    background: linear-gradient(145deg, #e53935 0%, #c62828 100%);
+    border: 3px solid #ffcdd2;
+}
+
+.uno-card.blue {
+    background: linear-gradient(145deg, #1e88e5 0%, #1565c0 100%);
+    border: 3px solid #bbdefb;
+}
+
+.uno-card.green {
+    background: linear-gradient(145deg, #43a047 0%, #2e7d32 100%);
+    border: 3px solid #c8e6c9;
+}
+
+.uno-card.yellow {
+    background: linear-gradient(145deg, #fdd835 0%, #f9a825 100%);
+    border: 3px solid #fff9c4;
+}
+
+.uno-card.wild {
+    background: linear-gradient(145deg, #212121 0%, #0a0a0a 100%);
+    border: 3px solid #616161;
+}
+
+/* White diamond center */
+.uno-card::before {
+    content: '';
+    position: absolute;
+    width: 55%;
+    height: 75%;
+    background: rgba(255, 255, 255, 0.95);
+    transform: rotate(45deg);
+    border-radius: 8px;
+}
+
+/* Wild card has 4-color diamond */
+.uno-card.wild::before {
+    background:
+        linear-gradient(135deg, #f44336 0%, #f44336 50%, transparent 50%) top left,
+        linear-gradient(225deg, #ffeb3b 0%, #ffeb3b 50%, transparent 50%) top right,
+        linear-gradient(315deg, #2196f3 0%, #2196f3 50%, transparent 50%) bottom right,
+        linear-gradient(45deg, #4caf50 0%, #4caf50 50%, transparent 50%) bottom left;
+    background-size: 50% 50%;
+    background-repeat: no-repeat;
+}
+
+/* Card Value - Center */
+.uno-card-value {
+    position: relative;
+    z-index: 2;
+    font-size: 3.5rem;
+    font-weight: 900;
+    font-family: 'Arial Black', sans-serif;
+    color: transparent;
+    -webkit-text-stroke: 4px;
+}
+
+.uno-card.red .uno-card-value {
+    -webkit-text-stroke-color: #c62828;
+}
+
+.uno-card.blue .uno-card-value {
+    -webkit-text-stroke-color: #1565c0;
+}
+
+.uno-card.green .uno-card-value {
+    -webkit-text-stroke-color: #2e7d32;
+}
+
+.uno-card.yellow .uno-card-value {
+    -webkit-text-stroke-color: #f57f17;
+}
+
+.uno-card.wild .uno-card-value {
+    -webkit-text-stroke: none;
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+/* Corner Values */
+.uno-card-corner {
+    position: absolute;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.uno-card-corner.top-left {
+    top: 8px;
+    left: 10px;
+}
+
+.uno-card-corner.bottom-right {
+    bottom: 8px;
+    right: 10px;
+    transform: rotate(180deg);
+}
+
+/* ========================================
+   PLAYER HAND (Bottom)
+   ======================================== */
+.uno-player-area {
+    grid-area: bottom;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+}
+
+.uno-player-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.uno-player-label .player-name {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.uno-player-label .score {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.uno-player-label .star {
+    color: #b0b0b0;
+}
+
+/* Hand Cards Container */
+.uno-hand {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+/* Player's Hand Card */
+.uno-hand-card {
+    width: 95px;
+    height: 135px;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: -35px;
+    flex-shrink: 0;
+}
+
+.uno-hand-card:first-child {
+    margin-left: 0;
+}
+
+.uno-hand-card:hover {
+    transform: translateY(-25px) scale(1.05);
+    z-index: 10;
+}
+
+.uno-hand-card.not-playable {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.uno-hand-card.not-playable:hover {
+    transform: translateY(-10px);
+}
+
+/* Hand Card Colors */
+.uno-hand-card.red {
+    background: linear-gradient(145deg, #e53935 0%, #c62828 100%);
+    border: 3px solid #ffcdd2;
+}
+
+.uno-hand-card.blue {
+    background: linear-gradient(145deg, #1e88e5 0%, #1565c0 100%);
+    border: 3px solid #bbdefb;
+}
+
+.uno-hand-card.green {
+    background: linear-gradient(145deg, #43a047 0%, #2e7d32 100%);
+    border: 3px solid #c8e6c9;
+}
+
+.uno-hand-card.yellow {
+    background: linear-gradient(145deg, #fdd835 0%, #f9a825 100%);
+    border: 3px solid #fff9c4;
+}
+
+.uno-hand-card.wild {
+    background: linear-gradient(145deg, #212121 0%, #0a0a0a 100%);
+    border: 3px solid #616161;
+}
+
+/* White diamond for hand cards */
+.uno-hand-card::before {
+    content: '';
+    position: absolute;
+    width: 55%;
+    height: 75%;
+    background: rgba(255, 255, 255, 0.95);
+    transform: rotate(45deg);
+    border-radius: 6px;
+}
+
+.uno-hand-card.wild::before {
+    background:
+        linear-gradient(135deg, #f44336 0%, #f44336 50%, transparent 50%) top left,
+        linear-gradient(225deg, #ffeb3b 0%, #ffeb3b 50%, transparent 50%) top right,
+        linear-gradient(315deg, #2196f3 0%, #2196f3 50%, transparent 50%) bottom right,
+        linear-gradient(45deg, #4caf50 0%, #4caf50 50%, transparent 50%) bottom left;
+    background-size: 50% 50%;
+    background-repeat: no-repeat;
+}
+
+/* Hand Card Value */
+.uno-hand-card .card-value {
+    position: relative;
+    z-index: 2;
+    font-size: 3.2rem;
+    font-weight: 900;
+    font-family: 'Arial Black', sans-serif;
+    color: transparent;
+    -webkit-text-stroke: 3.5px;
+}
+
+.uno-hand-card.red .card-value {
+    -webkit-text-stroke-color: #c62828;
+}
+
+.uno-hand-card.blue .card-value {
+    -webkit-text-stroke-color: #1565c0;
+}
+
+.uno-hand-card.green .card-value {
+    -webkit-text-stroke-color: #2e7d32;
+}
+
+.uno-hand-card.yellow .card-value {
+    -webkit-text-stroke-color: #f57f17;
+}
+
+.uno-hand-card.wild .card-value {
+    -webkit-text-stroke: none;
+    color: #fff;
+    font-size: 1rem;
+}
+
+/* Hand Card Corner Values */
+.uno-hand-card .card-corner {
+    position: absolute;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    z-index: 3;
+}
+
+.uno-hand-card .card-corner.top-left {
+    top: 8px;
+    left: 8px;
+}
+
+.uno-hand-card .card-corner.bottom-right {
+    bottom: 8px;
+    right: 8px;
+    transform: rotate(180deg);
+}
+
+/* Shake Animation */
+.uno-hand-card.shake {
+    animation: card-shake 0.4s ease;
+}
+
+@keyframes card-shake {
+
+    0%,
+    100% {
+        transform: translateX(0) translateY(-25px);
+    }
+
+    25% {
+        transform: translateX(-10px) translateY(-25px) rotate(-3deg);
+    }
+
+    75% {
+        transform: translateX(10px) translateY(-25px) rotate(3deg);
+    }
+}
+
+/* UNO Shout Button */
+.uno-shout-btn {
+    position: absolute;
+    bottom: 150px;
+    right: 40px;
+    background: linear-gradient(145deg, #f44336 0%, #c62828 100%);
+    color: #fff;
+    border: 3px solid #ffcdd2;
+    padding: 12px 30px;
+    border-radius: 30px;
+    font-size: 1.3rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.5);
+    animation: pulse-uno 0.8s infinite;
+    z-index: 50;
+}
+
+@keyframes pulse-uno {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* ========================================
+   COLOR PICKER MODAL
+   ======================================== */
+.uno-color-picker-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.uno-color-picker {
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border: 3px solid #555;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+}
+
+.uno-color-picker-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 24px;
+}
+
+.uno-color-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.uno-color-option {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.uno-color-option:hover {
+    transform: scale(1.15);
+    border-color: #fff;
+}
+
+.uno-color-option.red {
+    background: linear-gradient(145deg, #f44336, #c62828);
+}
+
+.uno-color-option.blue {
+    background: linear-gradient(145deg, #2196f3, #1565c0);
+}
+
+.uno-color-option.green {
+    background: linear-gradient(145deg, #4caf50, #2e7d32);
+}
+
+.uno-color-option.yellow {
+    background: linear-gradient(145deg, #ffeb3b, #f9a825);
+}
+
+/* ========================================
+   GAME OVER MODAL
+   ======================================== */
+.uno-game-over-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.uno-game-over {
+    background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+    border: 3px solid #ffc107;
+    border-radius: 20px;
+    padding: 50px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(255, 193, 7, 0.3);
+}
+
+.uno-game-over-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin-bottom: 16px;
+}
+
+.uno-game-over-title.winner {
+    color: #ffc107;
+    text-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
+}
+
+.uno-game-over-title.loser {
+    color: #888;
+}
+
+.uno-winner-name {
+    font-size: 1.3rem;
+    color: #4caf50;
+    margin-bottom: 30px;
+}
+
+/* ========================================
+   WAITING ROOM / LOBBY (keep existing)
+   ======================================== */
+.uno-lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 20px;
+}
+
+.uno-lobby-title {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #fff;
+}
+
+.uno-create-btn {
+    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+    color: #fff;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.uno-rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    padding: 0 20px;
+}
+
+.uno-room-card {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.uno-room-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-4px);
+}
+
+.uno-room-card.my-room {
+    border-color: #4CAF50;
+}
+
+.uno-room-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.uno-room-host {
+    font-weight: 700;
+}
+
+.uno-room-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.uno-room-status.waiting {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+}
+
+.uno-room-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.uno-room-players {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.uno-room-players span {
+    color: #4CAF50;
+    font-weight: 700;
+}
+
+.uno-room-avatars {
+    display: flex;
+}
+
+.uno-room-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ff5722;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-left: -8px;
+    border: 2px solid #0a1a2a;
+}
+
+.uno-room-avatar:first-child {
+    margin-left: 0;
+}
+
+.uno-room-join-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #2196F3 0%, #1565C0 100%);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.uno-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.uno-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.uno-empty-text {
+    font-size: 1.25rem;
+}
+
+.uno-empty-subtext {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 8px;
+}
+
+/* Waiting Room */
+.uno-waiting-room {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 480px;
+    margin: 40px auto;
+}
+
+.uno-waiting-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 24px;
+}
+
+.uno-players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.uno-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 14px 18px;
+    border-radius: 12px;
+}
+
+.uno-player-row.is-host {
+    border: 1px solid rgba(255, 193, 7, 0.5);
+}
+
+.uno-player-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.uno-player-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #ff5722;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.uno-player-name {
+    font-weight: 600;
+}
+
+.uno-player-badge {
+    font-size: 0.7rem;
+    color: #ffc107;
+    margin-left: 8px;
+}
+
+.uno-ready-status {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.uno-ready-status.ready {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+}
+
+.uno-ready-status.not-ready {
+    background: rgba(244, 67, 54, 0.2);
+    color: #F44336;
+}
+
+.uno-waiting-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.uno-ready-btn,
+.uno-start-btn {
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+}
+
+.uno-ready-btn {
+    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+    color: #fff;
+}
+
+.uno-ready-btn.unready {
+    background: linear-gradient(135deg, #F44336 0%, #C62828 100%);
+}
+
+.uno-start-btn {
+    background: linear-gradient(135deg, #FF9800 0%, #EF6C00 100%);
+    color: #fff;
+}
+
+.uno-start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.uno-leave-btn {
+    background: transparent;
+    border: 2px solid rgba(244, 67, 54, 0.5);
+    color: #F44336;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+/* Loading */
+.uno-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    gap: 20px;
+}
+
+.uno-loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.uno-loading-text {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Modal */
+.uno-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.uno-modal {
+    background: #1a1a1a;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    min-width: 340px;
+}
+
+.uno-modal-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.uno-modal-field {
+    margin-bottom: 24px;
+}
+
+.uno-modal-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 12px;
+}
+
+.uno-player-selector {
+    display: flex;
+    gap: 12px;
+}
+
+.uno-player-option {
+    flex: 1;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+}
+
+.uno-player-option.selected {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.15);
+}
+
+.uno-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.uno-modal-cancel {
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.uno-modal-confirm {
+    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ========================================
+   RESPONSIVE - FORCE LANDSCAPE ON MOBILE
+   ======================================== */
+
+/* Force landscape orientation message for portrait mode */
+.uno-rotate-device {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center, #2c5a7c 0%, #1a3d5c 40%, #0f2840 70%, #0a1a2a 100%);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    padding: 40px;
+}
+
+.uno-rotate-device .rotate-icon {
+    font-size: 4rem;
+    margin-bottom: 24px;
+    animation: rotate-phone 2s ease-in-out infinite;
+}
+
+.uno-rotate-device .rotate-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.uno-rotate-device .rotate-subtext {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+@keyframes rotate-phone {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(90deg);
+    }
+}
+
+/* Show rotate message in portrait on small screens */
+@media (max-width: 900px) and (orientation: portrait) {
+    .uno-rotate-device {
+        display: flex;
+    }
+
+    .uno-game-board {
+        display: none;
+    }
+}
+
+/* Tablet landscape */
+@media (max-width: 1024px) and (orientation: landscape) {
+    .uno-wrapper {
+        min-height: 100vh;
+    }
+
+    .uno-container {
+        height: 100vh;
+    }
+
+    .uno-game-board {
+        grid-template-columns: 140px 1fr 140px;
+        padding: 10px;
+        gap: 5px;
+    }
+
+    .uno-card-back-h,
+    .uno-card-back-v {
+        width: 50px;
+        height: 72px;
+    }
+
+    .uno-card-back-h {
+        margin-left: -28px;
+    }
+
+    .uno-card-back-v {
+        margin-top: -50px;
+    }
+
+    .uno-card-back-h::after,
+    .uno-card-back-v::after,
+    .uno-card-back-h::before,
+    .uno-card-back-v::before {
+        width: 26px;
+        height: 26px;
+    }
+
+    .uno-card-back-large,
+    .uno-card {
+        width: 70px;
+        height: 100px;
+    }
+
+    .uno-draw-pile-stack {
+        width: 70px;
+        height: 100px;
+    }
+
+    .uno-card-back-large::after {
+        width: 36px;
+        height: 36px;
+    }
+
+    .uno-hand-card {
+        width: 65px;
+        height: 95px;
+        margin-left: -28px;
+    }
+
+    .uno-card-value {
+        font-size: 2.4rem;
+        -webkit-text-stroke: 3px;
+    }
+
+    .uno-hand-card .card-value {
+        font-size: 2.2rem;
+        -webkit-text-stroke: 2.5px;
+    }
+
+    .uno-card-corner,
+    .uno-hand-card .card-corner {
+        font-size: 0.8rem;
+    }
+
+    .uno-opponent-label,
+    .uno-player-label {
+        font-size: 0.7rem;
+    }
+
+    .uno-quit-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Mobile landscape (phones) */
+@media (max-width: 768px) and (orientation: landscape) {
+    .uno-wrapper {
+        min-height: 100vh;
+    }
+
+    .uno-container {
+        height: 100vh;
+    }
+
+    .uno-game-board {
+        grid-template-columns: 100px 1fr 100px;
+        grid-template-rows: auto 1fr auto;
+        padding: 8px;
+        gap: 4px;
+    }
+
+    .uno-card-back-h,
+    .uno-card-back-v {
+        width: 38px;
+        height: 54px;
+    }
+
+    .uno-card-back-h {
+        margin-left: -22px;
+    }
+
+    .uno-card-back-v {
+        margin-top: -38px;
+    }
+
+    .uno-card-back-h::after,
+    .uno-card-back-v::after,
+    .uno-card-back-h::before,
+    .uno-card-back-v::before {
+        width: 20px;
+        height: 20px;
+    }
+
+    .uno-card-back-large,
+    .uno-card {
+        width: 55px;
+        height: 78px;
+        border-radius: 8px;
+    }
+
+    .uno-draw-pile-stack {
+        width: 55px;
+        height: 78px;
+        border-radius: 8px;
+    }
+
+    .uno-card-back-large::after {
+        width: 28px;
+        height: 28px;
+    }
+
+    .uno-hand-card {
+        width: 50px;
+        height: 72px;
+        margin-left: -22px;
+        border-radius: 8px;
+    }
+
+    .uno-hand-card:hover {
+        transform: translateY(-15px) scale(1.05);
+    }
+
+    .uno-card-value {
+        font-size: 1.8rem;
+        -webkit-text-stroke: 2px;
+    }
+
+    .uno-hand-card .card-value {
+        font-size: 1.6rem;
+        -webkit-text-stroke: 2px;
+    }
+
+    .uno-card-corner {
+        font-size: 0.65rem;
+        top: 4px;
+        left: 5px;
+    }
+
+    .uno-card-corner.bottom-right {
+        bottom: 4px;
+        right: 5px;
+    }
+
+    .uno-hand-card .card-corner {
+        font-size: 0.6rem;
+        top: 3px;
+        left: 4px;
+    }
+
+    .uno-hand-card .card-corner.bottom-right {
+        bottom: 3px;
+        right: 4px;
+    }
+
+    .uno-opponent-label,
+    .uno-player-label {
+        font-size: 0.6rem;
+        gap: 6px;
+    }
+
+    .uno-quit-btn {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+        top: 8px;
+        left: 8px;
+    }
+
+    .uno-nav-arrow {
+        width: 24px;
+        height: 24px;
+        font-size: 0.9rem;
+    }
+
+    .uno-piles-container {
+        gap: 10px;
+    }
+
+    .uno-color-indicator {
+        width: 20px;
+        height: 20px;
+    }
+
+    .uno-shout-btn {
+        bottom: 100px;
+        right: 20px;
+        padding: 8px 20px;
+        font-size: 1rem;
+    }
+
+    .uno-hand {
+        padding: 5px 0;
+    }
+}
+
+/* Very small mobile landscape */
+@media (max-height: 400px) and (orientation: landscape) {
+    .uno-game-board {
+        grid-template-columns: 80px 1fr 80px;
+        padding: 5px;
+    }
+
+    .uno-card-back-h,
+    .uno-card-back-v {
+        width: 32px;
+        height: 46px;
+    }
+
+    .uno-card-back-h {
+        margin-left: -18px;
+    }
+
+    .uno-card-back-v {
+        margin-top: -32px;
+    }
+
+    .uno-card-back-h::after,
+    .uno-card-back-v::after,
+    .uno-card-back-h::before,
+    .uno-card-back-v::before {
+        width: 16px;
+        height: 16px;
+    }
+
+    .uno-card-back-large,
+    .uno-card {
+        width: 45px;
+        height: 65px;
+    }
+
+    .uno-draw-pile-stack {
+        width: 45px;
+        height: 65px;
+    }
+
+    .uno-card-back-large::after {
+        width: 22px;
+        height: 22px;
+    }
+
+    .uno-hand-card {
+        width: 42px;
+        height: 60px;
+        margin-left: -18px;
+    }
+
+    .uno-card-value {
+        font-size: 1.4rem;
+        -webkit-text-stroke: 1.5px;
+    }
+
+    .uno-hand-card .card-value {
+        font-size: 1.2rem;
+        -webkit-text-stroke: 1.5px;
+    }
+
+    .uno-opponent-label,
+    .uno-player-label {
+        font-size: 0.5rem;
+    }
+
+    .uno-shout-btn {
+        bottom: 80px;
+        padding: 6px 15px;
+        font-size: 0.85rem;
+    }
+}

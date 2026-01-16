@@ -15,8 +15,7 @@ const games = [
         image: '/images/aviator.png',
         emoji: '✈️',
         category: 'crash',
-        featured: true,
-        hot: true
+        featured: true
     },
     // Originals
     {
@@ -43,6 +42,15 @@ const games = [
         path: '/games/mines',
         image: '/images/mines.png',
         emoji: '💎',
+        category: 'originals',
+        featured: true
+    },
+    {
+        id: 'dice',
+        name: 'Dice',
+        path: '/games/dice',
+        image: '/images/dice.png',
+        emoji: '🎲',
         category: 'originals',
         featured: true
     },

@@ -1,0 +1,605 @@
+/* ========================================
+   DICE GAME STYLES - StakeX Theme
+   Compact No-Scroll Layout
+   ======================================== */
+
+/* Wrapper - Full viewport height without scroll */
+.dice-wrapper {
+    height: calc(100vh - 70px);
+    max-height: calc(100vh - 70px);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Main Container - Horizontal Split */
+.dice-container {
+    display: flex;
+    gap: 20px;
+    max-width: 1100px;
+    width: 100%;
+    height: 100%;
+    max-height: 520px;
+}
+
+/* Control Panel (Left) - Compact */
+.dice-panel {
+    width: 300px;
+    min-width: 300px;
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+/* Input Groups - Tighter spacing */
+.input-group {
+    margin-bottom: 12px;
+}
+
+.input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.balance-tag {
+    color: #00e701;
+    font-weight: 700;
+}
+
+.input-field {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 10px;
+    padding: 0 10px;
+    height: 42px;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus-within {
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+.input-field.error {
+    border-color: #ff4757;
+}
+
+.input-field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+    width: 100%;
+}
+
+.input-field input::-webkit-inner-spin-button,
+.input-field input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+.cash-icon {
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+/* Bet Amount Row */
+.bet-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.bet-field {
+    flex: 1;
+}
+
+.quick-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.quick-btn {
+    width: 36px;
+    height: 20px;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px;
+    color: #d4af37;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-btn:hover {
+    background: rgba(212, 175, 55, 0.3);
+}
+
+.quick-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Multiplier / Win Chance Row */
+.dice-calc-row {
+    display: flex;
+    gap: 10px;
+}
+
+.dice-calc-row .input-group {
+    flex: 1;
+    margin-bottom: 10px;
+}
+
+/* Over/Under Toggle */
+.mode-toggle {
+    display: flex;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    padding: 3px;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 10px 8px;
+    background: transparent;
+    border: none;
+    color: #7a8599;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mode-btn.active {
+    background: linear-gradient(135deg, #00e701 0%, #00b301 100%);
+    color: #000;
+    box-shadow: 0 2px 12px rgba(0, 231, 1, 0.4);
+}
+
+.mode-btn:not(.active):hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Target Slider */
+.target-slider-container {
+    margin: 8px 0;
+}
+
+.target-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #00e701 0%, #ff4757 100%);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.target-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s ease;
+}
+
+.target-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+
+.target-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Roll Button */
+.roll-button {
+    width: 100%;
+    height: 48px;
+    background: linear-gradient(135deg, #00e701 0%, #00b301 100%);
+    border: none;
+    border-radius: 10px;
+    color: #000;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+}
+
+.roll-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 231, 1, 0.5);
+}
+
+.roll-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.roll-button .btn-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: rotate(45deg);
+    animation: buttonShine 3s infinite;
+}
+
+@keyframes buttonShine {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+
+    100% {
+        transform: translateX(100%) rotate(45deg);
+    }
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Payout Info - Compact inline */
+.payout-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.payout-item {
+    text-align: center;
+    flex: 1;
+}
+
+.payout-label {
+    font-size: 9px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.payout-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #d4af37;
+}
+
+.payout-value.win {
+    color: #00e701;
+}
+
+/* Game Area (Right) */
+.dice-game-area {
+    flex: 1;
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Header */
+.game-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.game-title {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #d4af37, #f0d78c, #d4af37);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 4px 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-subtitle {
+    color: #7a8599;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Dice Track */
+.dice-track-container {
+    padding: 10px 0;
+}
+
+.dice-track-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #7a8599;
+    font-weight: 600;
+    padding: 0 4px;
+}
+
+.dice-track {
+    position: relative;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    overflow: visible;
+    border: 2px solid rgba(212, 175, 55, 0.25);
+}
+
+.track-segments {
+    display: flex;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.track-segment {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.track-segment.loss {
+    background: linear-gradient(180deg, #2d1f1f 0%, #1a1010 100%);
+}
+
+.track-segment.win {
+    background: linear-gradient(180deg, #00e701 0%, #00a301 100%);
+    box-shadow: inset 0 0 20px rgba(0, 231, 1, 0.3);
+}
+
+.track-target {
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    width: 3px;
+    background: #fff;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+    z-index: 5;
+    transition: left 0.3s ease;
+    border-radius: 2px;
+}
+
+/* Result Pointer */
+.result-pointer {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    transition: left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pointer-diamond {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #d4af37 0%, #f0d78c 50%, #d4af37 100%);
+    transform: rotate(45deg);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.7);
+    animation: pointerPulse 0.6s ease-out;
+}
+
+.pointer-diamond.win {
+    background: linear-gradient(135deg, #00e701 0%, #00ff88 50%, #00e701 100%);
+    box-shadow: 0 0 20px rgba(0, 231, 1, 0.9);
+}
+
+.pointer-diamond.loss {
+    background: linear-gradient(135deg, #ff4757 0%, #ff6b7a 50%, #ff4757 100%);
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.9);
+}
+
+.pointer-value {
+    transform: rotate(-45deg);
+    font-size: 10px;
+    font-weight: 800;
+    color: #000;
+}
+
+@keyframes pointerPulse {
+    0% {
+        transform: rotate(45deg) scale(0.5);
+        opacity: 0;
+    }
+
+    50% {
+        transform: rotate(45deg) scale(1.15);
+    }
+
+    100% {
+        transform: rotate(45deg) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Target Display */
+.target-display {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.target-text {
+    font-size: 14px;
+    color: #7a8599;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.target-value {
+    font-size: 52px;
+    font-weight: 800;
+    color: #00e701;
+    text-shadow: 0 0 30px rgba(0, 231, 1, 0.4);
+    line-height: 1;
+}
+
+/* Result Banner */
+.result-banner {
+    margin-top: 16px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    animation: resultSlide 0.4s ease;
+}
+
+.result-banner.won {
+    background: linear-gradient(135deg, rgba(0, 231, 1, 0.15) 0%, rgba(0, 179, 1, 0.08) 100%);
+    border: 2px solid #00e701;
+    color: #00e701;
+}
+
+.result-banner.lost {
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.15) 0%, rgba(200, 50, 60, 0.08) 100%);
+    border: 2px solid #ff4757;
+    color: #ff4757;
+}
+
+.win-amount {
+    color: #00ff88;
+    font-size: 22px;
+}
+
+@keyframes resultSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Error Text */
+.error-text {
+    color: #ff4757;
+    font-size: 10px;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .dice-wrapper {
+        height: auto;
+        min-height: calc(100vh - 70px);
+        padding: 16px 12px;
+        padding-top: 20px;
+        overflow-y: auto;
+        align-items: flex-start;
+    }
+
+    .dice-container {
+        flex-direction: column;
+        max-height: none;
+        margin-top: 0;
+    }
+
+    .dice-panel {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .dice-game-area {
+        padding: 20px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dice-wrapper {
+        padding: 8px;
+    }
+
+    .dice-panel {
+        margin-top: 15px;
+        padding: 14px;
+    }
+
+    .dice-calc-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .game-title {
+        font-size: 22px;
+    }
+
+    .target-value {
+        font-size: 40px;
+    }
+}
