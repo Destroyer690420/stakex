@@ -14,6 +14,7 @@ import CoinFlipGame from './components/games/CoinFlipGame';
 import PokerGame from './components/games/PokerGame';
 import Roulette from './components/games/Roulette';
 import Mines from './components/games/Mines';
+import TowerGame from './components/games/TowerGame';
 import Aviator from './components/games/Aviator';
 import DiceGame from './components/games/DiceGame';
 import Profile from './pages/Profile';
@@ -107,6 +108,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Mines />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/tower"
+                element={
+                  <PrivateRoute>
+                    <TowerGame />
                   </PrivateRoute>
                 }
               />

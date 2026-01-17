@@ -1,0 +1,741 @@
+/* ========================================
+   TOWER GAME STYLES - StakeX Theme
+   Matches Dice Game Layout
+   ======================================== */
+
+/* Wrapper - Full viewport height without scroll */
+.tower-wrapper {
+    height: calc(100vh - 70px);
+    max-height: calc(100vh - 70px);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Main Container - Horizontal Split */
+.tower-container {
+    display: flex;
+    gap: 20px;
+    max-width: 1100px;
+    width: 100%;
+    height: 100%;
+    max-height: 520px;
+}
+
+/* ========== LEFT PANEL - Controls ========== */
+.tower-panel {
+    width: 300px;
+    min-width: 300px;
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    border: 1px solid rgba(138, 43, 226, 0.2);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Input Groups */
+.input-group {
+    margin-bottom: 14px;
+}
+
+.input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.balance-tag {
+    color: #00e701;
+    font-weight: 700;
+}
+
+.input-field {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    border-radius: 10px;
+    padding: 0 10px;
+    height: 42px;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus-within {
+    border-color: #8a2be2;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
+}
+
+.input-field.error {
+    border-color: #ff4757;
+}
+
+.input-field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+    width: 100%;
+}
+
+.input-field input::-webkit-inner-spin-button,
+.input-field input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.cash-icon {
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+.error-text {
+    color: #ff4757;
+    font-size: 10px;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Select Wrapper */
+.select-wrapper {
+    position: relative;
+}
+
+.select-wrapper select {
+    width: 100%;
+    height: 42px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    border-radius: 10px;
+    padding: 0 35px 0 12px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: all 0.3s ease;
+}
+
+.select-wrapper select:focus {
+    border-color: #8a2be2;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
+}
+
+.select-wrapper select option {
+    background: #1a1a2e;
+    color: #fff;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8a2be2;
+    font-size: 10px;
+    pointer-events: none;
+}
+
+/* Bet Button */
+.bet-button {
+    width: 100%;
+    height: 48px;
+    background: linear-gradient(135deg, #8a2be2 0%, #6a1fa8 100%);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+}
+
+.bet-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5);
+}
+
+.bet-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: rotate(45deg);
+    animation: buttonShine 3s infinite;
+}
+
+@keyframes buttonShine {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+
+    100% {
+        transform: translateX(100%) rotate(45deg);
+    }
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Game Stats */
+.game-stats {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 13px;
+    color: #7a8599;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-value {
+    font-weight: 700;
+    color: #fff;
+}
+
+.stat-value.success {
+    color: #8a2be2;
+}
+
+/* Multiplier Box */
+.multiplier-box {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.mult-current,
+.mult-next {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.mult-current {
+    background: rgba(138, 43, 226, 0.15);
+    border: 1px solid rgba(138, 43, 226, 0.4);
+}
+
+.mult-next {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mult-label {
+    display: block;
+    font-size: 9px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+}
+
+.mult-value {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.mult-current .mult-value {
+    color: #8a2be2;
+}
+
+.mult-next .mult-value {
+    color: #7a8599;
+}
+
+/* Cashout Button */
+.cashout-button {
+    width: 100%;
+    height: 48px;
+    background: rgba(138, 43, 226, 0.2);
+    border: 2px solid rgba(138, 43, 226, 0.3);
+    border-radius: 10px;
+    color: #7a8599;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: not-allowed;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.cashout-button.ready {
+    background: linear-gradient(135deg, #00e701 0%, #00b301 100%);
+    border: none;
+    color: #000;
+    cursor: pointer;
+}
+
+.cashout-button.ready:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 231, 1, 0.5);
+}
+
+/* Result Button */
+.result-button {
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.result-button.won {
+    background: linear-gradient(135deg, #00e701 0%, #00b301 100%);
+    color: #000;
+}
+
+.result-button.lost {
+    background: linear-gradient(135deg, #ff4757 0%, #cc3a47 100%);
+    color: #fff;
+}
+
+/* Profit Section */
+.profit-section {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profit-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #7a8599;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.profit-mult {
+    color: #8a2be2;
+}
+
+.profit-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 0 12px;
+    height: 42px;
+    transition: all 0.3s ease;
+}
+
+.profit-display.positive {
+    border-color: rgba(0, 231, 1, 0.3);
+    background: rgba(0, 231, 1, 0.08);
+}
+
+.profit-amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: #7a8599;
+}
+
+.profit-display.positive .profit-amount {
+    color: #00e701;
+}
+
+/* ========== RIGHT AREA - Game Grid ========== */
+.tower-game-area {
+    flex: 1;
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    border: 1px solid rgba(138, 43, 226, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Game Header */
+.game-header {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.game-title {
+    font-size: 24px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #8a2be2, #c084fc, #8a2be2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Tower Grid Container */
+.tower-grid-container {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    min-height: 0;
+}
+
+/* Multiplier Column - Aligned with rows */
+.multiplier-column {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 70px;
+    min-width: 70px;
+}
+
+.multiplier-pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(138, 43, 226, 0.15);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    border-radius: 6px;
+    padding: 0 6px;
+    transition: all 0.3s ease;
+}
+
+.multiplier-pill .mult-value {
+    font-size: 11px;
+    font-weight: 700;
+    color: #a78bce;
+}
+
+.multiplier-pill.active {
+    background: rgba(138, 43, 226, 0.3);
+    border-color: #8a2be2;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+}
+
+.multiplier-pill.active .mult-value {
+    color: #c084fc;
+}
+
+.multiplier-pill.passed {
+    opacity: 0.4;
+    background: rgba(40, 40, 50, 0.5);
+    border-color: rgba(100, 100, 120, 0.2);
+}
+
+.multiplier-pill.passed .mult-value {
+    color: #666;
+}
+
+/* Tower Grid */
+.tower-grid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.tower-row {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+}
+
+/* Tower Tiles */
+.tower-tile {
+    background: linear-gradient(145deg, rgba(88, 43, 120, 0.4) 0%, rgba(60, 30, 90, 0.5) 100%);
+    border: 2px solid rgba(138, 43, 226, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: default;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.tile-glow {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tile-content {
+    z-index: 1;
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.4));
+}
+
+/* Tile States */
+.tower-tile.locked {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: rgba(40, 40, 50, 0.4);
+    border-color: rgba(100, 100, 120, 0.1);
+}
+
+.tower-tile.passed {
+    opacity: 0.5;
+    background: rgba(50, 50, 60, 0.4);
+    border-color: rgba(100, 100, 120, 0.2);
+}
+
+.tower-tile.active {
+    cursor: pointer;
+    background: linear-gradient(145deg, rgba(88, 43, 120, 0.6) 0%, rgba(60, 30, 90, 0.7) 100%);
+    border-color: rgba(138, 43, 226, 0.4);
+    animation: tilePulse 2s ease-in-out infinite;
+}
+
+.tower-tile.active:hover {
+    transform: scale(1.05);
+    border-color: #8a2be2;
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+}
+
+.tower-tile.active:hover .tile-glow {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(138, 43, 226, 0.2) 0%, transparent 70%);
+}
+
+.tower-tile.safe {
+    background: linear-gradient(145deg, rgba(212, 175, 55, 0.9) 0%, rgba(180, 140, 40, 0.8) 100%);
+    border-color: #d4af37;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+    animation: tileFlip 0.5s ease;
+}
+
+.tower-tile.mine {
+    background: linear-gradient(145deg, #ff4757 0%, #cc3a47 100%);
+    border-color: #ff4757;
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
+    animation: mineExplode 0.4s ease;
+}
+
+@keyframes tilePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(138, 43, 226, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+    }
+}
+
+@keyframes tileFlip {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes mineExplode {
+    0% {
+        transform: scale(0);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Result Banner */
+.result-banner {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 800;
+    animation: resultSlide 0.4s ease;
+}
+
+.result-banner.won {
+    background: linear-gradient(135deg, rgba(0, 231, 1, 0.15) 0%, rgba(0, 179, 1, 0.08) 100%);
+    border: 2px solid #00e701;
+    color: #00e701;
+}
+
+.result-banner.lost {
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.15) 0%, rgba(200, 50, 60, 0.08) 100%);
+    border: 2px solid #ff4757;
+    color: #ff4757;
+}
+
+.win-amount {
+    color: #00ff88;
+    font-size: 18px;
+}
+
+@keyframes resultSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Confetti */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -10px;
+    animation: confettiFall 3s linear forwards;
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+    .tower-wrapper {
+        height: auto;
+        min-height: calc(100vh - 70px);
+        padding: 16px 12px;
+        overflow-y: auto;
+        align-items: flex-start;
+    }
+
+    .tower-container {
+        flex-direction: column;
+        max-height: none;
+    }
+
+    .tower-panel {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .tower-game-area {
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tower-wrapper {
+        padding: 8px;
+    }
+
+    .tower-panel {
+        padding: 14px;
+    }
+
+    .multiplier-column {
+        width: 55px;
+        min-width: 55px;
+    }
+
+    .multiplier-pill .mult-value {
+        font-size: 9px;
+    }
+
+    .game-title {
+        font-size: 20px;
+    }
+}
+
+/* Remove old sidebar class if needed */
+.tower-sidebar {
+    display: none;
+}
+
+.tower-grid-area {
+    display: none;
+}

@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/admin');
 const gameRoutes = require('./routes/games');
 const rouletteRoutes = require('./routes/roulette');
 const minesRoutes = require('./routes/mines');
+const towerRoutes = require('./routes/tower');
 
 const app = express();
 const server = http.createServer(app);
@@ -89,6 +90,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/games/roulette', rouletteRoutes);
 app.use('/api/games/mines', minesRoutes);
+app.use('/api/games/tower', towerRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {

@@ -55,6 +55,16 @@ const games = [
         featured: true
     },
     {
+        id: 'tower',
+        name: 'Tower',
+        path: '/games/tower',
+        image: '/images/tower.png',
+        emoji: '🗼',
+        category: 'originals',
+        featured: true,
+        new: true
+    },
+    {
         id: 'roulette',
         name: 'Roulette',
         path: '/games/roulette',
