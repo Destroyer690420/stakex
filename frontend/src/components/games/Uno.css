@@ -596,7 +596,6 @@
     border-radius: 12px;
     position: relative;
     box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -625,46 +624,43 @@
 }
 
 /* Hand Card Colors */
-/* Hand Card Colors */
 .uno-hand-card.red {
     background: linear-gradient(135deg, #ff5252 0%, #d32f2f 50%, #b71c1c 100%);
     border: 3px solid #ffcdd2;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .uno-hand-card.blue {
     background: linear-gradient(135deg, #448aff 0%, #1976d2 50%, #0d47a1 100%);
     border: 3px solid #bbdefb;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .uno-hand-card.green {
     background: linear-gradient(135deg, #69f0ae 0%, #388e3c 50%, #1b5e20 100%);
     border: 3px solid #c8e6c9;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .uno-hand-card.yellow {
     background: linear-gradient(135deg, #ffff00 0%, #fbc02d 50%, #f57f17 100%);
     border: 3px solid #fff9c4;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .uno-hand-card.wild {
     background: linear-gradient(135deg, #424242 0%, #212121 50%, #000000 100%);
     border: 3px solid #757575;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* White diamond for hand cards */
 .uno-hand-card::before {
     content: '';
     position: absolute;
-    width: 55%;
-    height: 75%;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 70px;
     background: rgba(255, 255, 255, 0.95);
-    transform: rotate(45deg);
+    transform: translate(-50%, -50%) rotate(45deg);
     border-radius: 6px;
+    z-index: 1;
 }
 
 .uno-hand-card.wild::before {
@@ -681,38 +677,36 @@
 .uno-hand-card .card-value {
     position: relative;
     z-index: 2;
-    font-size: 3.2rem;
+    font-size: 2.8rem;
     font-weight: 900;
     font-family: 'Arial Black', sans-serif;
-    color: transparent;
-    -webkit-text-stroke: 3.5px;
+    text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff;
 }
 
 .uno-hand-card.red .card-value {
-    -webkit-text-stroke-color: #c62828;
+    color: #c62828;
 }
 
 .uno-hand-card.blue .card-value {
-    -webkit-text-stroke-color: #1565c0;
+    color: #1565c0;
 }
 
 .uno-hand-card.green .card-value {
-    -webkit-text-stroke-color: #2e7d32;
+    color: #2e7d32;
 }
 
 .uno-hand-card.yellow .card-value {
-    -webkit-text-stroke-color: #f57f17;
+    color: #f57f17;
 }
 
 .uno-hand-card.wild .card-value {
-    -webkit-text-stroke: none;
     color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     font-size: 1rem;
 }
 
 .uno-hand-card.special-card .card-value {
-    font-size: 2.2rem;
-    -webkit-text-stroke: 2px;
+    font-size: 2rem;
 }
 
 /* Hand Card Corner Values */
