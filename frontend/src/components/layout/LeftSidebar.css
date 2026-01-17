@@ -1,0 +1,165 @@
+/* Navigation Styles */
+.left-sidebar {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    scrollbar-width: none;
+}
+
+.left-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Collapsed State Override */
+.left-sidebar.collapsed {
+    padding: 16px 8px;
+    /* Reduced padding */
+    align-items: center;
+}
+
+/* Category Toggles (Casino / Sports) */
+.category-toggles {
+    display: flex;
+    background-color: var(--bg-secondary);
+    border-radius: 20px;
+    padding: 4px;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+}
+
+.cat-toggle {
+    flex: 1;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cat-toggle.active {
+    background-color: #2f3b47;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cat-toggle:hover:not(.active) {
+    color: #fff;
+}
+
+/* Collapsed Toggles */
+.cat-toggle.collapsed {
+    padding: 8px 0;
+    width: 32px;
+    text-align: center;
+    border-radius: 50%;
+}
+
+.category-toggles:has(.collapsed) {
+    flex-direction: column;
+    gap: 8px;
+    background: transparent;
+    padding: 0;
+}
+
+/* Navigation Sections */
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nav-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 700;
+    margin-bottom: 8px;
+    padding-left: 12px;
+    letter-spacing: 0.5px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nav-item:hover {
+    background-color: var(--hover-overlay);
+    color: #fff;
+}
+
+.nav-item.active {
+    background-color: var(--bg-secondary);
+    color: #fff;
+    /* border-left: 3px solid var(--accent-teal); */
+}
+
+/* Icon Styles */
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    transition: transform 0.2s;
+    color: var(--text-secondary);
+    /* Default color */
+}
+
+.nav-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    /* Use parent color */
+}
+
+.nav-item:hover .nav-icon,
+.nav-item.active .nav-icon {
+    color: #fff;
+    /* White on hover/active */
+    transform: scale(1.1);
+}
+
+/* Collapsed Item Overrides */
+.left-sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 12px;
+}
+
+.left-sidebar.collapsed .nav-icon svg {
+    width: 24px;
+    /* Larger in mini mode */
+    height: 24px;
+}
+
+/* Badges */
+.nav-badge {
+    margin-left: auto;
+    background-color: var(--accent-teal);
+    color: #000;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}

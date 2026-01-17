@@ -78,19 +78,37 @@ const categories = [
     {
         id: 'crash',
         name: 'Crash Games',
-        icon: '🚀',
+        icon: (
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M2.5 19.6L3.8 20.9C4.5 21.6 5.6 21.6 6.3 20.9L12 15.2C12.4 15.3 12.8 15.3 13.2 15.3C15.8 15.3 18.2 14.1 19.8 12.1L21.3 13.6C21.7 14 22.3 14 22.7 13.6C23.1 13.2 23.1 12.6 22.7 12.2L11 0.5C10.6 0.1 10 0.1 9.6 0.5L11.1 2C9.1 3.6 7.9 6 7.9 8.6C7.9 9 7.9 9.4 8 9.8L2.3 15.5C1.6 16.2 1.6 17.3 2.5 19.6Z" />
+                <path d="M15 17L13.5 15.5C13.5 15.5 12.8 17.5 13.2 18.5C13.6 19.5 15.5 22.5 15.5 22.5C15.5 22.5 16.9 21.6 17.5 20.6C18.1 19.6 19.5 17.5 19.5 17.5L18 16L15 17Z" />
+            </svg>
+        ),
         subtitle: 'Ride the multiplier'
     },
     {
         id: 'originals',
         name: 'StakeX Originals',
-        icon: '⚡',
+        icon: (
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M11 21H7V13H4L13 3V11H16L7 21Z" />
+            </svg>
+        ),
         subtitle: 'Exclusive games with the best odds'
     },
     {
         id: 'table',
         name: 'Table Games',
-        icon: '🃏',
+        icon: (
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19.5 3H4.5C3.7 3 3 3.7 3 4.5V19.5C3 20.3 3.7 21 4.5 21H19.5C20.3 21 21 20.3 21 19.5V4.5C21 3.7 20.3 3 19.5 3ZM19.5 19.5H4.5V4.5H19.5V19.5Z" />
+                <path d="M7.5 16.5C8.3 16.5 9 15.8 9 15C9 14.2 8.3 13.5 7.5 13.5C6.7 13.5 6 14.2 6 15C6 15.8 6.7 16.5 7.5 16.5Z" />
+                <path d="M16.5 16.5C17.3 16.5 18 15.8 18 15C18 14.2 17.3 13.5 16.5 13.5C15.7 13.5 15 14.2 15 15C15 15.8 15.7 16.5 16.5 16.5Z" />
+                <path d="M7.5 10.5C8.3 10.5 9 9.8 9 9C9 8.2 8.3 7.5 7.5 7.5C6.7 7.5 6 8.2 6 9C6 9.8 6.7 10.5 7.5 10.5Z" />
+                <path d="M16.5 10.5C17.3 10.5 18 9.8 18 9C18 8.2 17.3 7.5 16.5 7.5C15.7 7.5 15 8.2 15 9C15 9.8 15.7 10.5 16.5 10.5Z" />
+                <path d="M12 13.5C12.8 13.5 13.5 12.8 13.5 12C13.5 11.2 12.8 10.5 12 10.5C11.2 10.5 10.5 11.2 10.5 12C10.5 12.8 11.2 13.5 12 13.5Z" />
+            </svg>
+        ),
         subtitle: 'Classic casino experience'
     }
 ];
@@ -119,13 +137,15 @@ const GameTile = ({ game }) => {
                     </div>
                 )}
                 <div className="game-overlay">
-                    <span className="game-name-overlay">{game.name}</span>
                     <span className="play-button">
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
                     </span>
                 </div>
+            </div>
+            <div className="game-info">
+                <span className="game-name">{game.name}</span>
             </div>
         </Link>
     );
@@ -137,7 +157,7 @@ const GameRow = ({ category, games }) => {
 
     const scroll = (direction) => {
         if (scrollRef.current) {
-            const scrollAmount = 280;
+            const scrollAmount = 240;
             scrollRef.current.scrollBy({
                 left: direction === 'left' ? -scrollAmount : scrollAmount,
                 behavior: 'smooth'
@@ -150,11 +170,12 @@ const GameRow = ({ category, games }) => {
     return (
         <section className="games-section">
             <div className="section-header">
-                <h2 className="section-title">
-                    <span className="title-icon">{category.icon}</span>
-                    {category.name}
-                </h2>
-                <p className="section-subtitle">{category.subtitle}</p>
+                <span className="title-icon">{category.icon}</span>
+                <div className="header-text">
+                    <h2 className="section-title">
+                        {category.name}
+                    </h2>
+                </div>
             </div>
 
             <div className="games-row-container">
