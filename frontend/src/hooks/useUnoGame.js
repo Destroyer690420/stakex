@@ -18,7 +18,6 @@ const useUnoGame = (roomId) => {
     const [error, setError] = useState(null);
 
     const socketRef = useRef(null);
-    const turnTimerRef = useRef(null);
 
     // Computed values - use String() for UUID comparisons
     const isMyTurn = String(room?.player_order?.[room?.current_turn_index]) === String(user?.id);
@@ -111,7 +110,7 @@ const useUnoGame = (roomId) => {
         return () => {
             socket.disconnect();
         };
-    }, [roomId, user?.id, navigate]);
+    }, [roomId, user?.id, navigate, players]);
 
     // Subscribe to real-time updates
     useEffect(() => {
