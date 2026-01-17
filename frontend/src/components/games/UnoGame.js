@@ -62,13 +62,20 @@ const UnoGame = () => {
 
         // Reset timer when turn changes
         setTurnTimeLeft(TURN_DURATION);
+        let hasAutoDrawn = false;
 
         timerRef.current = setInterval(() => {
             setTurnTimeLeft(prev => {
                 if (prev <= 1) {
-                    // Time's up - auto draw if it's my turn
-                    if (isMyTurn) {
-                        drawCard();
+                    // Time's up - auto draw if it's my turn and haven't already drawn
+                    if (isMyTurn && !hasAutoDrawn) {
+                        hasAutoDrawn = true;
+                        // Clear interval first to prevent multiple calls
+                        if (timerRef.current) {
+                            clearInterval(timerRef.current);
+                        }
+                        // Auto draw card
+                        drawCard().catch(err => console.error('Auto-draw failed:', err));
                     }
                     return TURN_DURATION;
                 }
