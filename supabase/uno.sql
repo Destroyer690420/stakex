@@ -786,6 +786,15 @@ BEGIN
                 FROM uno_rooms 
                 WHERE id = p_room_id;
                 
+                -- If deck is empty, regenerate it
+                IF v_fresh_deck IS NULL OR jsonb_array_length(v_fresh_deck) = 0 THEN
+                    UPDATE uno_rooms
+                    SET deck = shuffle_jsonb_array(generate_uno_deck())
+                    WHERE id = p_room_id;
+                    
+                    SELECT deck INTO v_fresh_deck FROM uno_rooms WHERE id = p_room_id;
+                END IF;
+                
                 -- Check deck has cards
                 IF v_fresh_deck IS NOT NULL AND jsonb_array_length(v_fresh_deck) > 0 THEN
                     -- Get top card from deck
@@ -904,8 +913,20 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Not your turn');
     END IF;
     
+    -- If deck is empty, reshuffle a new deck
     IF jsonb_array_length(v_room.deck) = 0 THEN
-        RETURN jsonb_build_object('success', false, 'error', 'Deck is empty');
+        -- Generate a fresh shuffled deck
+        UPDATE uno_rooms
+        SET deck = shuffle_jsonb_array(generate_uno_deck())
+        WHERE id = p_room_id;
+        
+        -- Refetch the room with new deck
+        SELECT * INTO v_room FROM uno_rooms WHERE id = p_room_id;
+        
+        -- If still empty after regeneration (shouldn't happen), return error
+        IF jsonb_array_length(v_room.deck) = 0 THEN
+            RETURN jsonb_build_object('success', false, 'error', 'Could not regenerate deck');
+        END IF;
     END IF;
     
     v_card := v_room.deck->0;
