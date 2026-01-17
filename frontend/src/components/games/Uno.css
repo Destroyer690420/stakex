@@ -3723,3 +3723,208 @@
         display: none !important;
     }
 }
+
+/* ========================================
+   WAITING ROOM STYLES
+   ======================================== */
+.uno-waiting-room {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 70px);
+    padding: 20px;
+    gap: 20px;
+}
+
+.uno-waiting-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.uno-pot-display.waiting {
+    background: linear-gradient(145deg, #1a2a3a 0%, #0f1a25 100%);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    padding: 20px 40px;
+    text-align: center;
+}
+
+.uno-pot-display.waiting .pot-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #d4af37;
+    margin-bottom: 5px;
+}
+
+.uno-pot-display.waiting .pot-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.uno-pot-display.waiting .pot-hint {
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 5px;
+}
+
+.uno-players-list {
+    width: 100%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.uno-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+
+.uno-player-row.is-host {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.1);
+}
+
+.uno-player-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.uno-player-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #d4af37 0%, #b8941f 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1a1a2e;
+}
+
+.uno-player-name {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.uno-player-badge {
+    font-size: 0.75rem;
+    color: #d4af37;
+    margin-left: 8px;
+}
+
+.uno-ready-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.uno-ready-status.ready {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.uno-ready-status.not-ready {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ff9800;
+}
+
+.paid-check {
+    font-size: 1rem;
+}
+
+/* Waiting Room Action Buttons */
+.uno-waiting-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.uno-ready-btn {
+    background: linear-gradient(145deg, #4caf50 0%, #388e3c 100%);
+    color: #fff;
+    border: none;
+    padding: 14px 35px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.uno-ready-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+}
+
+.uno-ready-btn.unready {
+    background: linear-gradient(145deg, #ff9800 0%, #f57c00 100%);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+}
+
+.uno-start-btn {
+    background: linear-gradient(145deg, #d4af37 0%, #b8941f 100%);
+    color: #1a1a2e;
+    border: none;
+    padding: 14px 35px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+}
+
+.uno-start-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+}
+
+.uno-start-btn:disabled {
+    background: linear-gradient(145deg, #555 0%, #444 100%);
+    color: #888;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.uno-leave-btn {
+    background: linear-gradient(145deg, #d32f2f 0%, #b71c1c 100%);
+    color: #fff;
+    border: none;
+    padding: 14px 35px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+}
+
+.uno-leave-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5);
+}
