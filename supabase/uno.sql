@@ -465,6 +465,70 @@ END;
 $$;
 
 -- ========================================
+-- RPC: Delete UNO Room (Host Only)
+-- ========================================
+CREATE OR REPLACE FUNCTION fn_delete_uno_room(
+    p_user_id UUID,
+    p_room_id UUID
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+    v_room RECORD;
+    v_player RECORD;
+    v_refund_amount NUMERIC;
+BEGIN
+    -- Get room
+    SELECT * INTO v_room
+    FROM uno_rooms
+    WHERE id = p_room_id
+    FOR UPDATE;
+    
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Room not found');
+    END IF;
+    
+    -- Only host can delete
+    IF v_room.host_id != p_user_id THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Only the host can delete the room');
+    END IF;
+    
+    -- Can only delete waiting rooms (not in progress)
+    IF v_room.status = 'playing' THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Cannot delete a room while game is in progress');
+    END IF;
+    
+    -- Refund all players
+    v_refund_amount := v_room.bet_amount;
+    
+    FOR v_player IN SELECT * FROM uno_players WHERE room_id = p_room_id LOOP
+        -- Refund each player
+        UPDATE public.users
+        SET cash = cash + v_refund_amount, updated_at = NOW()
+        WHERE id = v_player.user_id;
+        
+        -- Record refund transaction
+        INSERT INTO public.transactions (user_id, type, amount, balance_after, description, metadata)
+        SELECT v_player.user_id, 'refund', v_refund_amount, cash, 'UNO Room Deleted by Host',
+               jsonb_build_object('game', 'uno', 'room_id', p_room_id)
+        FROM public.users WHERE id = v_player.user_id;
+    END LOOP;
+    
+    -- Delete players first (due to foreign key)
+    DELETE FROM uno_players WHERE room_id = p_room_id;
+    
+    -- Delete the room
+    DELETE FROM uno_rooms WHERE id = p_room_id;
+    
+    RETURN jsonb_build_object('success', true, 'message', 'Room deleted and all players refunded');
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
+
+-- ========================================
 -- RPC: Start UNO Game
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_start_uno_game(

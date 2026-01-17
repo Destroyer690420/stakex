@@ -3922,3 +3922,25 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(211, 47, 47, 0.5);
 }
+
+.uno-delete-btn {
+    background: linear-gradient(145deg, #616161 0%, #424242 100%);
+    color: #fff;
+    border: 2px solid #ff5252;
+    padding: 14px 25px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.uno-delete-btn:hover {
+    background: linear-gradient(145deg, #b71c1c 0%, #7f0000 100%);
+    border-color: #ff8a80;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(183, 28, 28, 0.5);
+}

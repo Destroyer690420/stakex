@@ -24,6 +24,7 @@ const UnoGame = () => {
         canCallUno,
         joinRoom,
         leaveRoom,
+        deleteRoom,
         toggleReady,
         startGame,
         playCard,
@@ -290,6 +291,12 @@ const UnoGame = () => {
                             )}
 
                             <button className="uno-leave-btn" onClick={handleLeave}>Leave</button>
+
+                            {isHost && (
+                                <button className="uno-delete-btn" onClick={deleteRoom}>
+                                    🗑️ Delete Room
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

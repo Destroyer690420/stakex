@@ -358,6 +358,28 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id]);
 
+    // Delete room (host only)
+    const deleteRoom = useCallback(async () => {
+        try {
+            const confirmed = window.confirm('Are you sure you want to delete this room? All players will be refunded.');
+            if (!confirmed) return;
+
+            const { data, error } = await supabase.rpc('fn_delete_uno_room', {
+                p_user_id: user.id,
+                p_room_id: roomId
+            });
+
+            if (error) throw error;
+            if (!data.success) throw new Error(data.error);
+
+            toast.success('Room deleted! All players have been refunded.');
+            navigate('/games/uno');
+
+        } catch (err) {
+            toast.error(err.message);
+        }
+    }, [roomId, user?.id, navigate]);
+
     // Play a card
     const playCard = useCallback(async (cardIndex, wildColor = null) => {
         try {
@@ -483,6 +505,7 @@ const useUnoGame = (roomId) => {
         createRoom,
         joinRoom,
         leaveRoom,
+        deleteRoom,
         toggleReady,
         startGame,
         playCard,
