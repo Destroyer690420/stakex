@@ -19,9 +19,11 @@ const Navbar = () => {
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+    const isUnoGame = location.pathname.startsWith('/games/uno/');
+
     if (!isAuthenticated) {
         return (
-            <nav className="navbar-premium">
+            <nav className={`navbar-premium ${isUnoGame ? 'mobile-hidden' : ''}`}>
                 <div className="navbar-container">
                     <Link to="/" className="navbar-logo">
                         <span className="logo-stake">Stake</span>
@@ -37,7 +39,7 @@ const Navbar = () => {
     }
 
     return (
-        <nav className="navbar-premium">
+        <nav className={`navbar-premium ${isUnoGame ? 'mobile-hidden' : ''}`}>
             <div className="navbar-container">
                 {/* Logo */}
                 <Link to="/dashboard" className="navbar-logo" onClick={closeMobileMenu}>

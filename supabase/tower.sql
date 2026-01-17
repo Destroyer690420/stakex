@@ -284,7 +284,7 @@ BEGIN
         -- Record win transaction
         INSERT INTO public.transactions (user_id, type, amount, balance_after, description, metadata)
         VALUES (p_user_id, 'win', v_payout, v_new_cash,
-                format('Tower win - Completed all rows (%.2fx)', v_multiplier),
+                'Tower win - Completed all rows (' || v_multiplier || 'x)',
                 jsonb_build_object(
                     'game', 'tower',
                     'difficulty', v_session.difficulty,
@@ -392,7 +392,7 @@ BEGIN
     -- Record win transaction
     INSERT INTO public.transactions (user_id, type, amount, balance_after, description, metadata)
     VALUES (p_user_id, 'win', v_payout, v_new_cash,
-            format('Tower cashout - Row %s (%.2fx)', v_session.current_row, v_multiplier),
+            'Tower cashout - Row ' || v_session.current_row || ' (' || v_multiplier || 'x)',
             jsonb_build_object(
                 'game', 'tower',
                 'difficulty', v_session.difficulty,

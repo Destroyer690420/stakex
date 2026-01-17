@@ -130,6 +130,7 @@ app.use((err, req, res, next) => {
 require('./socket/poker')(io);
 require('./socket/coinflip')(io);
 require('./socket/crashLoop')(io);
+require('./socket/uno')(io);
 
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';

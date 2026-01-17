@@ -65,6 +65,16 @@ const games = [
         new: true
     },
     {
+        id: 'uno',
+        name: 'Uno',
+        path: '/games/uno',
+        image: '/images/uno.png',
+        emoji: '🃏',
+        category: 'table',
+        featured: true,
+        new: true
+    },
+    {
         id: 'roulette',
         name: 'Roulette',
         path: '/games/roulette',

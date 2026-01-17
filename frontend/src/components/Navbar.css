@@ -465,3 +465,9 @@
         font-size: 22px;
     }
 }
+
+@media (max-width: 1024px) {
+    .navbar-premium.mobile-hidden {
+        display: none !important;
+    }
+}

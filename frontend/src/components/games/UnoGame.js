@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../../context/AuthContext';
 import useUnoGame from '../../hooks/useUnoGame';
 import toast from 'react-hot-toast';
 import './Uno.css';
+
+const TURN_DURATION = 15; // 15 seconds per turn
 
 const UnoGame = () => {
     const { roomId } = useParams();
@@ -27,18 +29,21 @@ const UnoGame = () => {
         playCard,
         drawCard,
         shoutUno,
-        challengeUno,
         isCardPlayable,
     } = useUnoGame(roomId);
 
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
     const [shakingCard, setShakingCard] = useState(null);
+    const [turnTimeLeft, setTurnTimeLeft] = useState(TURN_DURATION);
+    const [showWinOverlay, setShowWinOverlay] = useState(false);
 
-    // Get my player info
-    const myPlayer = players.find(p => p.user_id === user?.id);
-    const isHost = room?.host_id === user?.id;
-    const opponents = players.filter(p => p.user_id !== user?.id);
+    const timerRef = useRef(null);
+
+    // Get my player info - use string comparison for UUIDs
+    const myPlayer = players.find(p => String(p.user_id) === String(user?.id));
+    const isHost = String(room?.host_id) === String(user?.id);
+    const opponents = players.filter(p => String(p.user_id) !== String(user?.id));
 
     // Position opponents: top, left, right based on count
     const getOpponentPositions = () => {
@@ -50,12 +55,46 @@ const UnoGame = () => {
 
     const { top: topOpponent, left: leftOpponent, right: rightOpponent } = getOpponentPositions();
 
+    // Turn timer
+    useEffect(() => {
+        if (room?.status !== 'playing') return;
+
+        // Reset timer when turn changes
+        setTurnTimeLeft(TURN_DURATION);
+
+        timerRef.current = setInterval(() => {
+            setTurnTimeLeft(prev => {
+                if (prev <= 1) {
+                    // Time's up - auto draw if it's my turn
+                    if (isMyTurn) {
+                        drawCard();
+                    }
+                    return TURN_DURATION;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
+    }, [room?.current_turn_index, room?.status, isMyTurn, drawCard]);
+
+    // Check for game end
+    useEffect(() => {
+        if (room?.status === 'finished' && room?.winner_id) {
+            setShowWinOverlay(true);
+        }
+    }, [room?.status, room?.winner_id]);
+
     // Check if we need to join the room first
     useEffect(() => {
         if (!loading && room && !myPlayer && room.status === 'waiting') {
             joinRoom();
         }
-    }, [loading, room, myPlayer]);
+    }, [loading, room, myPlayer, joinRoom]);
 
     // Handle card click
     const handleCardClick = useCallback(async (cardIndex) => {
@@ -119,10 +158,16 @@ const UnoGame = () => {
         return value;
     };
 
+    // Get current player name
+    const getCurrentPlayerName = () => {
+        const player = players.find(p => p.user_id === currentPlayer);
+        return player?.username || 'Unknown';
+    };
+
     // Render opponent card backs
     const renderOpponentCards = (opponent, isVertical = false) => {
-        const cardCount = opponent?.hand?.length || 0;
-        const isActive = room?.player_order?.[room.turn_index] === opponent?.user_id;
+        const cardCount = opponent?.hand?.length || opponent?.hand_count || 0;
+        const isActive = room?.player_order?.[room.current_turn_index] === opponent?.user_id;
 
         return (
             <div className={`uno-opponent ${isActive ? 'active' : ''}`}>
@@ -133,10 +178,11 @@ const UnoGame = () => {
                 </div>
                 <div className="uno-opponent-label">
                     <span className="score">
-                        <span className="star">★</span>
-                        <span>0</span>
+                        <span className="card-count">{cardCount}</span>
+                        <span className="cards-icon">🃏</span>
                     </span>
                     <span className="player-name">{opponent?.username || 'Player'}</span>
+                    {opponent?.has_paid && <span className="paid-badge">✓</span>}
                 </div>
             </div>
         );
@@ -181,6 +227,13 @@ const UnoGame = () => {
                     <div className="uno-waiting-room">
                         <h2 className="uno-waiting-title">🎴 Waiting Room</h2>
 
+                        {/* Pot Display */}
+                        <div className="uno-pot-display waiting">
+                            <div className="pot-label">Prize Pool</div>
+                            <div className="pot-amount">${Number(room.pot_amount || 0).toLocaleString()}</div>
+                            <div className="pot-hint">Entry: ${Number(room.bet_amount || 0).toLocaleString()}</div>
+                        </div>
+
                         <div className="uno-players-list">
                             {players.map((player) => (
                                 <div
@@ -199,6 +252,7 @@ const UnoGame = () => {
                                         </div>
                                     </div>
                                     <div className={`uno-ready-status ${player.is_ready || player.user_id === room.host_id ? 'ready' : 'not-ready'}`}>
+                                        {player.has_paid && <span className="paid-check">💰</span>}
                                         {player.user_id === room.host_id ? '✓ Host' : (player.is_ready ? '✓ Ready' : '○ Not Ready')}
                                     </div>
                                 </div>
@@ -215,12 +269,13 @@ const UnoGame = () => {
                         </div>
 
                         <div className="uno-waiting-actions">
-                            {!isHost && myPlayer && (
+                            {/* Ready button for non-host players */}
+                            {!isHost && (
                                 <button
-                                    className={`uno-ready-btn ${myPlayer.is_ready ? 'unready' : ''}`}
+                                    className={`uno-ready-btn ${myPlayer?.is_ready ? 'unready' : ''}`}
                                     onClick={toggleReady}
                                 >
-                                    {myPlayer.is_ready ? 'Cancel' : 'Ready'}
+                                    {myPlayer?.is_ready ? 'Cancel' : 'Ready'}
                                 </button>
                             )}
 
@@ -242,9 +297,9 @@ const UnoGame = () => {
         );
     }
 
-    // Game over
-    if (room.status === 'finished') {
-        const isWinner = room.winner_id === user?.id;
+    // Game over with win overlay
+    if (room.status === 'finished' || showWinOverlay) {
+        const isWinner = String(room.winner_id) === String(user?.id);
 
         return (
             <div className="uno-wrapper">
@@ -255,10 +310,33 @@ const UnoGame = () => {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                         >
-                            <h1 className={`uno-game-over-title ${isWinner ? 'winner' : 'loser'}`}>
-                                {isWinner ? '🎉 YOU WON!' : 'GAME OVER'}
-                            </h1>
-                            <div className="uno-winner-name">👑 {room.winner_username}</div>
+                            {isWinner ? (
+                                <>
+                                    <div className="confetti-wrapper">
+                                        {[...Array(50)].map((_, i) => (
+                                            <div key={i} className={`confetti confetti-${i % 5}`} style={{
+                                                left: `${Math.random() * 100}%`,
+                                                animationDelay: `${Math.random() * 2}s`,
+                                                animationDuration: `${2 + Math.random() * 2}s`
+                                            }} />
+                                        ))}
+                                    </div>
+                                    <h1 className="uno-game-over-title winner">🎉 YOU WON! 🎉</h1>
+                                    <div className="win-amount">
+                                        <span className="win-label">You won</span>
+                                        <span className="win-value">${Number(room.pot_amount || 0).toLocaleString()}</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="uno-game-over-title loser">GAME OVER</h1>
+                                    <div className="uno-winner-name">👑 {room.winner_username} wins!</div>
+                                    <div className="win-amount loser">
+                                        <span className="win-label">Prize</span>
+                                        <span className="win-value">${Number(room.pot_amount || 0).toLocaleString()}</span>
+                                    </div>
+                                </>
+                            )}
                             <button className="uno-create-btn" onClick={() => navigate('/games/uno')}>
                                 Back to Lobby
                             </button>
@@ -285,6 +363,19 @@ const UnoGame = () => {
                     🚪 QUIT
                 </button>
 
+                {/* Turn Timer */}
+                <div className={`uno-turn-timer ${isMyTurn ? 'my-turn' : ''}`}>
+                    <div className="timer-bar">
+                        <div
+                            className="timer-fill"
+                            style={{ width: `${(turnTimeLeft / TURN_DURATION) * 100}%` }}
+                        />
+                    </div>
+                    <div className="timer-text">
+                        {isMyTurn ? `Your turn: ${turnTimeLeft}s` : `${getCurrentPlayerName()}'s turn`}
+                    </div>
+                </div>
+
                 <div className="uno-game-board">
                     {/* Top Opponent (Player 3) */}
                     <div className="uno-opponent-top">
@@ -296,10 +387,15 @@ const UnoGame = () => {
                         {leftOpponent && renderOpponentCards(leftOpponent, true)}
                     </div>
 
-                    {/* Center Play Area */}
                     <div className="uno-center-area">
+                        {/* Pot Display - Now inside center area */}
+                        <div className="uno-pot-display game">
+                            <div className="pot-icon">💰</div>
+                            <div className="pot-value">${Number(room.pot_amount || 0).toLocaleString()}</div>
+                        </div>
+
                         {/* Navigation & Special Mode */}
-                        <button className="uno-nav-arrow">‹</button>
+
 
                         <div className="uno-piles-container">
                             {/* Draw Pile */}
@@ -309,6 +405,7 @@ const UnoGame = () => {
                             >
                                 <div className="uno-draw-pile-stack"></div>
                                 <div className="uno-card-back-large"></div>
+                                {isMyTurn && <div className="draw-hint">Click to draw</div>}
                             </div>
 
                             {/* Discard Pile */}
@@ -337,7 +434,7 @@ const UnoGame = () => {
                             </div>
                         </div>
 
-                        <button className="uno-nav-arrow">›</button>
+
 
                         {/* Current Color Indicator */}
                         <div className={`uno-color-indicator ${room.current_color}`}></div>
@@ -351,10 +448,10 @@ const UnoGame = () => {
                     {/* Player 1 (Me) - Bottom */}
                     <div className="uno-player-area">
                         <div className="uno-player-label">
-                            <span className="player-name">PLAYER 1</span>
+                            <span className="player-name">{user?.username || 'YOU'}</span>
                             <span className="score">
-                                <span>0</span>
-                                <span className="star">★</span>
+                                <span>{myHand.length}</span>
+                                <span className="cards-icon">🃏</span>
                             </span>
                         </div>
 
@@ -364,15 +461,24 @@ const UnoGame = () => {
                                     const playable = isCardPlayable(card);
                                     const colorClass = card.type === 'wild' ? 'wild' : card.color;
 
+                                    const isSpecial = ['skip', 'reverse', '+2', '+4'].includes(card.value);
+
                                     return (
                                         <motion.div
-                                            key={`${card.id}-${index}`}
-                                            className={`uno-hand-card ${colorClass} ${playable && isMyTurn ? '' : 'not-playable'} ${shakingCard === index ? 'shake' : ''}`}
+                                            key={card.id}
+                                            className={`uno-hand-card ${colorClass} ${playable && isMyTurn ? '' : 'not-playable'} ${shakingCard === index ? 'shake' : ''} ${isSpecial ? 'special-card' : ''}`}
+                                            style={{ zIndex: index }}
                                             onClick={() => handleCardClick(index)}
-                                            initial={{ opacity: 0, y: 50 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -30 }}
-                                            transition={{ delay: index * 0.03 }}
+                                            initial={{ opacity: 0, y: -100, scale: 0.5 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{
+                                                opacity: 0,
+                                                y: -300,
+                                                scale: 0.4,
+                                                rotate: Math.random() * 40 - 20, /* Random rotation on play */
+                                                transition: { duration: 0.4 }
+                                            }}
+                                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                                             layout
                                         >
                                             <span className="card-corner top-left">
@@ -391,56 +497,65 @@ const UnoGame = () => {
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* UNO Button */}
-                {canCallUno && (
-                    <motion.button
-                        className="uno-shout-btn"
-                        onClick={shoutUno}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+            {/* UNO Button */}
+            {canCallUno && (
+                <motion.button
+                    className="uno-shout-btn"
+                    onClick={shoutUno}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    UNO!
+                </motion.button>
+            )}
+
+            {/* Color Picker Modal */}
+            <AnimatePresence>
+                {showColorPicker && (
+                    <motion.div
+                        className="uno-color-picker-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowColorPicker(false)}
                     >
-                        UNO!
-                    </motion.button>
-                )}
-
-                {/* Color Picker Modal */}
-                <AnimatePresence>
-                    {showColorPicker && (
                         <motion.div
-                            className="uno-color-picker-overlay"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowColorPicker(false)}
+                            className="uno-color-picker"
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.8 }}
+                            onClick={e => e.stopPropagation()}
                         >
-                            <motion.div
-                                className="uno-color-picker"
-                                initial={{ scale: 0.8 }}
-                                animate={{ scale: 1 }}
-                                exit={{ scale: 0.8 }}
-                                onClick={e => e.stopPropagation()}
-                            >
-                                <h3 className="uno-color-picker-title">Choose Color</h3>
-                                <div className="uno-color-options">
-                                    {['red', 'blue', 'green', 'yellow'].map(color => (
-                                        <motion.button
-                                            key={color}
-                                            className={`uno-color-option ${color}`}
-                                            onClick={() => handleColorSelect(color)}
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.9 }}
-                                        />
-                                    ))}
-                                </div>
-                            </motion.div>
+                            <h3 className="uno-color-picker-title">Choose Color</h3>
+                            <div className="uno-color-options">
+                                {['red', 'blue', 'green', 'yellow'].map(color => (
+                                    <motion.button
+                                        key={color}
+                                        className={`uno-color-option ${color}`}
+                                        onClick={() => handleColorSelect(color)}
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                    />
+                                ))}
+                            </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Rotate Device Overlay */}
+            <div className="uno-rotate-device">
+                <div className="rotate-content">
+                    <span className="rotate-icon">⟳</span>
+                    <p>Please rotate your device to play</p>
+                </div>
             </div>
         </div>
+
     );
 };
 
