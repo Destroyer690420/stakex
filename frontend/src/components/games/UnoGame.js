@@ -474,22 +474,35 @@ const UnoGame = () => {
                                 {myHand.map((card, index) => {
                                     const playable = isCardPlayable(card);
                                     const colorClass = card.type === 'wild' ? 'wild' : card.color;
-
                                     const isSpecial = ['skip', 'reverse', '+2', '+4'].includes(card.value);
+
+                                    // Dynamic card sizing based on hand size
+                                    const cardCount = myHand.length;
+                                    // Calculate margin: more overlap when more cards
+                                    let marginLeft = index === 0 ? 0 : Math.max(-70, Math.min(-30, -85 + (cardCount * 3)));
+                                    // Scale cards down slightly when there are many
+                                    const scale = cardCount > 15 ? 0.85 : cardCount > 10 ? 0.9 : 1;
+                                    const cardWidth = 95 * scale;
 
                                     return (
                                         <motion.div
                                             key={card.id}
                                             className={`uno-hand-card ${colorClass} ${playable && isMyTurn ? '' : 'not-playable'} ${shakingCard === index ? 'shake' : ''} ${isSpecial ? 'special-card' : ''}`}
-                                            style={{ zIndex: index }}
+                                            style={{
+                                                zIndex: index,
+                                                marginLeft: `${marginLeft}px`,
+                                                width: `${cardWidth}px`,
+                                                height: `${135 * scale}px`,
+                                                transform: `scale(${scale})`,
+                                            }}
                                             onClick={() => handleCardClick(index)}
                                             initial={{ opacity: 0, y: -100, scale: 0.5 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            animate={{ opacity: 1, y: 0, scale: scale }}
                                             exit={{
                                                 opacity: 0,
                                                 y: -300,
                                                 scale: 0.4,
-                                                rotate: Math.random() * 40 - 20, /* Random rotation on play */
+                                                rotate: Math.random() * 40 - 20,
                                                 transition: { duration: 0.4 }
                                             }}
                                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
