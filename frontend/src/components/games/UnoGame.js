@@ -315,6 +315,36 @@ const UnoGame = () => {
     if (room.status === 'finished' || showWinOverlay) {
         const isWinner = String(room.winner_id) === String(user?.id);
 
+        // Winner sees fullscreen video
+        if (isWinner) {
+            return (
+                <div className="uno-wrapper">
+                    <div className="uno-container">
+                        <div className="uno-winner-video-overlay">
+                            <video
+                                className="uno-winner-video"
+                                src="/winner_video.mp4"
+                                autoPlay
+                                playsInline
+                                onEnded={() => navigate('/games/uno')}
+                            />
+                            <button
+                                className="uno-skip-video-btn"
+                                onClick={() => navigate('/games/uno')}
+                            >
+                                Skip →
+                            </button>
+                            <div className="uno-winner-prize-overlay">
+                                <div className="prize-text">🎉 YOU WON!</div>
+                                <div className="prize-amount">${Number(room.pot_amount || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Losers see normal game over screen
         return (
             <div className="uno-wrapper">
                 <div className="uno-container">
@@ -324,33 +354,12 @@ const UnoGame = () => {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                         >
-                            {isWinner ? (
-                                <>
-                                    <div className="confetti-wrapper">
-                                        {[...Array(50)].map((_, i) => (
-                                            <div key={i} className={`confetti confetti-${i % 5}`} style={{
-                                                left: `${Math.random() * 100}%`,
-                                                animationDelay: `${Math.random() * 2}s`,
-                                                animationDuration: `${2 + Math.random() * 2}s`
-                                            }} />
-                                        ))}
-                                    </div>
-                                    <h1 className="uno-game-over-title winner">🎉 YOU WON! 🎉</h1>
-                                    <div className="win-amount">
-                                        <span className="win-label">You won</span>
-                                        <span className="win-value">${Number(room.pot_amount || 0).toLocaleString()}</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <h1 className="uno-game-over-title loser">GAME OVER</h1>
-                                    <div className="uno-winner-name">👑 {room.winner_username} wins!</div>
-                                    <div className="win-amount loser">
-                                        <span className="win-label">Prize</span>
-                                        <span className="win-value">${Number(room.pot_amount || 0).toLocaleString()}</span>
-                                    </div>
-                                </>
-                            )}
+                            <h1 className="uno-game-over-title loser">GAME OVER</h1>
+                            <div className="uno-winner-name">👑 {room.winner_username} wins!</div>
+                            <div className="win-amount loser">
+                                <span className="win-label">Prize</span>
+                                <span className="win-value">${Number(room.pot_amount || 0).toLocaleString()}</span>
+                            </div>
                             <button className="uno-create-btn" onClick={() => navigate('/games/uno')}>
                                 Back to Lobby
                             </button>

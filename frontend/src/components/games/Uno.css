@@ -3949,3 +3949,115 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(183, 28, 28, 0.5);
 }
+
+/* ========================================
+   WINNER VIDEO OVERLAY
+   ======================================== */
+.uno-winner-video-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.uno-winner-video {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.uno-skip-video-btn {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10001;
+}
+
+.uno-skip-video-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.uno-winner-prize-overlay {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 10001;
+    animation: prizeFloat 2s ease-in-out infinite;
+}
+
+.uno-winner-prize-overlay .prize-text {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
+        0 0 60px rgba(255, 215, 0, 0.5),
+        2px 2px 4px rgba(0, 0, 0, 0.8);
+    margin-bottom: 10px;
+}
+
+.uno-winner-prize-overlay .prize-amount {
+    font-size: 4rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffd700 0%, #ffec8b 50%, #ffd700 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6)) drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+@keyframes prizeFloat {
+
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    50% {
+        transform: translateX(-50%) translateY(-10px);
+    }
+}
+
+/* Mobile adjustments for video overlay */
+@media (max-width: 768px) {
+    .uno-skip-video-btn {
+        top: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+
+    .uno-winner-prize-overlay {
+        bottom: 30px;
+    }
+
+    .uno-winner-prize-overlay .prize-text {
+        font-size: 1.8rem;
+    }
+
+    .uno-winner-prize-overlay .prize-amount {
+        font-size: 2.5rem;
+    }
+}
