@@ -1056,6 +1056,8 @@
     padding: 32px;
     max-width: 480px;
     margin: 40px auto;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
 }
 
 .uno-waiting-title {
@@ -4059,5 +4061,62 @@
 
     .uno-winner-prize-overlay .prize-amount {
         font-size: 2.5rem;
+    }
+}
+
+/* Mobile Landscape - Waiting Room Fix */
+@media (max-height: 500px) and (orientation: landscape) {
+    .uno-container {
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .uno-waiting-room {
+        margin: 10px auto;
+        padding: 16px;
+        max-height: calc(100vh - 30px);
+        overflow-y: auto;
+    }
+
+    .uno-waiting-title {
+        font-size: 1.2rem;
+        margin-bottom: 12px;
+    }
+
+    .uno-pot-display.waiting {
+        padding: 12px 20px;
+        margin-bottom: 12px;
+    }
+
+    .uno-pot-display.waiting .pot-amount {
+        font-size: 1.5rem;
+    }
+
+    .uno-players-list {
+        margin-bottom: 12px;
+        gap: 6px;
+    }
+
+    .uno-player-row {
+        padding: 8px 12px;
+    }
+
+    .uno-player-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    .uno-waiting-actions {
+        gap: 8px;
+        padding-bottom: 10px;
+    }
+
+    .uno-ready-btn,
+    .uno-start-btn,
+    .uno-leave-btn,
+    .uno-delete-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
     }
 }
