@@ -7,9 +7,28 @@ const disconnectTimers = new Map(); // socketId -> timeout
 
 const DISCONNECT_TIMEOUT = 30000; // 30 seconds before forfeit
 const TURN_TIMEOUT = 15000; // 15 seconds per turn
+const ROOM_INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes before room is deleted
+const CLEANUP_INTERVAL = 5 * 60 * 1000; // Run cleanup every 5 minutes
 
 module.exports = (io) => {
     const unoNamespace = io.of('/uno');
+
+    // Cleanup stale rooms every 5 minutes
+    const cleanupInterval = setInterval(async () => {
+        try {
+            const { data, error } = await supabaseAdmin.rpc('fn_cleanup_stale_uno_rooms', {
+                p_inactivity_minutes: 10
+            });
+
+            if (error) {
+                console.error('🎴 Room cleanup error:', error);
+            } else if (data?.cleaned_count > 0) {
+                console.log(`🎴 Cleaned up ${data.cleaned_count} stale UNO rooms`);
+            }
+        } catch (err) {
+            console.error('🎴 Room cleanup failed:', err);
+        }
+    }, CLEANUP_INTERVAL);
 
     // Subscribe to Supabase realtime for room updates
     const roomChannel = supabaseAdmin
@@ -217,6 +236,7 @@ module.exports = (io) => {
                 try {
                     // Call leave room to forfeit
                     await supabaseAdmin.rpc('fn_leave_uno_room', {
+                        p_user_id: userId,
                         p_room_id: roomId
                     });
 

@@ -1075,6 +1075,66 @@ END;
 $$;
 
 -- ========================================
+-- RPC: Cleanup Stale/Inactive Rooms
+-- ========================================
+DROP FUNCTION IF EXISTS fn_cleanup_stale_uno_rooms(INTEGER) CASCADE;
+
+CREATE OR REPLACE FUNCTION fn_cleanup_stale_uno_rooms(
+    p_inactivity_minutes INTEGER DEFAULT 10
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+    v_stale_room RECORD;
+    v_player RECORD;
+    v_cleaned_count INTEGER := 0;
+    v_cutoff_time TIMESTAMPTZ;
+BEGIN
+    -- Calculate cutoff time
+    v_cutoff_time := NOW() - (p_inactivity_minutes || ' minutes')::INTERVAL;
+    
+    -- Find and cleanup stale waiting rooms
+    FOR v_stale_room IN 
+        SELECT * FROM uno_rooms 
+        WHERE status = 'waiting' 
+        AND updated_at < v_cutoff_time
+        FOR UPDATE
+    LOOP
+        -- Refund all players in the room
+        FOR v_player IN 
+            SELECT * FROM uno_players 
+            WHERE room_id = v_stale_room.id
+        LOOP
+            -- Refund the player
+            UPDATE public.users
+            SET cash = cash + v_stale_room.bet_amount, updated_at = NOW()
+            WHERE id = v_player.user_id;
+            
+            -- Record refund transaction
+            INSERT INTO public.transactions (user_id, type, amount, balance_after, description, metadata)
+            SELECT v_player.user_id, 'refund', v_stale_room.bet_amount, cash, 'UNO Room Auto-Cleanup (Inactivity)',
+                   jsonb_build_object('game', 'uno', 'room_id', v_stale_room.id)
+            FROM public.users WHERE id = v_player.user_id;
+        END LOOP;
+        
+        -- Delete players first (due to foreign key)
+        DELETE FROM uno_players WHERE room_id = v_stale_room.id;
+        
+        -- Delete the room
+        DELETE FROM uno_rooms WHERE id = v_stale_room.id;
+        
+        v_cleaned_count := v_cleaned_count + 1;
+    END LOOP;
+    
+    RETURN jsonb_build_object('success', true, 'cleaned_count', v_cleaned_count);
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN jsonb_build_object('success', false, 'error', SQLERRM, 'cleaned_count', v_cleaned_count);
+END;
+$$;
+
+-- ========================================
 -- ROW LEVEL SECURITY
 -- ========================================
 ALTER TABLE uno_rooms ENABLE ROW LEVEL SECURITY;
@@ -1097,6 +1157,7 @@ GRANT EXECUTE ON FUNCTION fn_uno_draw_card(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_uno_toggle_ready(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_uno_call_uno(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_get_uno_rooms() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION fn_cleanup_stale_uno_rooms(INTEGER) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION generate_uno_deck() TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION shuffle_jsonb_array(JSONB) TO authenticated, anon;
 
