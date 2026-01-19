@@ -70,6 +70,14 @@ const useUnoGame = (roomId) => {
             }
         });
 
+        // Handler for full player list updates (when someone joins/leaves)
+        socket.on('playersUpdated', ({ players: updatedPlayers }) => {
+            console.log('Players list updated:', updatedPlayers?.length, 'players');
+            if (updatedPlayers) {
+                setPlayers(updatedPlayers);
+            }
+        });
+
         socket.on('playerJoined', ({ userId }) => {
             toast.success('A player joined the room!');
         });
@@ -101,6 +109,14 @@ const useUnoGame = (roomId) => {
         socket.on('autoDrawn', ({ userId }) => {
             const player = players.find(p => p.user_id === userId);
             toast(`${player?.username || 'Player'} ran out of time and drew a card`);
+        });
+
+        // Handler for personalized hand updates from server
+        socket.on('handUpdated', ({ hand }) => {
+            console.log('Hand updated:', hand?.length, 'cards');
+            if (hand) {
+                setMyHand(hand);
+            }
         });
 
         socket.on('error', ({ message }) => {

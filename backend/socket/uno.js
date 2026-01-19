@@ -55,14 +55,31 @@ module.exports = (io) => {
         }, (payload) => {
             const roomId = payload.new?.room_id || payload.old?.room_id;
             if (roomId && activeRooms.has(roomId)) {
-                // Broadcast player updates (without revealing hands)
+                // Broadcast player updates (without revealing hands) to room
                 const playerData = payload.new ? {
                     ...payload.new,
-                    hand: undefined, // Don't reveal hand
+                    hand: undefined, // Don't reveal hand to others
                     hand_count: payload.new.hand ? JSON.parse(JSON.stringify(payload.new.hand)).length : 0
                 } : { deleted: true, user_id: payload.old?.user_id };
 
                 unoNamespace.to(roomId).emit('playerUpdated', playerData);
+
+                // Send personalized hand update to the player who owns this hand
+                if (payload.new?.user_id && payload.new?.hand) {
+                    // Find the socket for this user
+                    const roomSockets = activeRooms.get(roomId);
+                    if (roomSockets) {
+                        for (const socketId of roomSockets) {
+                            const playerInfo = playerSockets.get(socketId);
+                            if (playerInfo && playerInfo.userId === payload.new.user_id) {
+                                // Send hand directly to this player's socket
+                                unoNamespace.to(socketId).emit('handUpdated', {
+                                    hand: payload.new.hand
+                                });
+                            }
+                        }
+                    }
+                }
             }
         })
         .subscribe();
@@ -167,7 +184,13 @@ module.exports = (io) => {
                     myHand: myPlayerData?.hand || []
                 });
 
-                // Notify others that player joined/reconnected
+                // Broadcast full updated player list to all players in room (including the new joiner)
+                // This ensures everyone has the latest player data
+                unoNamespace.to(roomId).emit('playersUpdated', {
+                    players: playersWithCounts
+                });
+
+                // Also send notification for toast message
                 socket.to(roomId).emit('playerJoined', { userId });
 
             } catch (err) {
