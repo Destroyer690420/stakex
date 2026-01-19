@@ -55,31 +55,14 @@ module.exports = (io) => {
         }, (payload) => {
             const roomId = payload.new?.room_id || payload.old?.room_id;
             if (roomId && activeRooms.has(roomId)) {
-                // Broadcast player updates (without revealing hands) to room
+                // Broadcast player updates (without revealing hands)
                 const playerData = payload.new ? {
                     ...payload.new,
-                    hand: undefined, // Don't reveal hand to others
+                    hand: undefined, // Don't reveal hand
                     hand_count: payload.new.hand ? JSON.parse(JSON.stringify(payload.new.hand)).length : 0
                 } : { deleted: true, user_id: payload.old?.user_id };
 
                 unoNamespace.to(roomId).emit('playerUpdated', playerData);
-
-                // Send personalized hand update to the player who owns this hand
-                if (payload.new?.user_id && payload.new?.hand) {
-                    // Find the socket for this user
-                    const roomSockets = activeRooms.get(roomId);
-                    if (roomSockets) {
-                        for (const socketId of roomSockets) {
-                            const playerInfo = playerSockets.get(socketId);
-                            if (playerInfo && playerInfo.userId === payload.new.user_id) {
-                                // Send hand directly to this player's socket
-                                unoNamespace.to(socketId).emit('handUpdated', {
-                                    hand: payload.new.hand
-                                });
-                            }
-                        }
-                    }
-                }
             }
         })
         .subscribe();
@@ -149,48 +132,43 @@ module.exports = (io) => {
 
             // Fetch and send current room state
             try {
-                // Consolidated query: Get room with all players in one request
                 const { data: room } = await supabaseAdmin
                     .from('uno_rooms')
                     .select('*')
                     .eq('id', roomId)
                     .single();
 
-                // Get all players with their hands in a single query
-                const { data: allPlayers } = await supabaseAdmin
+                const { data: players } = await supabaseAdmin
                     .from('uno_players')
-                    .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno, hand')
+                    .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno')
                     .eq('room_id', roomId);
 
-                // Process players - hide other players' hands, calculate counts
-                const myPlayerData = allPlayers?.find(p => p.user_id === userId);
-                const playersWithCounts = allPlayers?.map(p => ({
-                    id: p.id,
-                    room_id: p.room_id,
-                    user_id: p.user_id,
-                    username: p.username,
-                    avatar_url: p.avatar_url,
-                    seat_index: p.seat_index,
-                    is_ready: p.is_ready,
-                    has_paid: p.has_paid,
-                    has_called_uno: p.has_called_uno,
-                    hand_count: p.hand?.length || 0
-                    // Don't expose hand to other players
+                // Get player counts for each player
+                const { data: handCounts } = await supabaseAdmin
+                    .from('uno_players')
+                    .select('user_id, hand')
+                    .eq('room_id', roomId);
+
+                const playersWithCounts = players?.map(p => ({
+                    ...p,
+                    hand_count: handCounts?.find(h => h.user_id === p.user_id)?.hand?.length || 0
                 }));
+
+                // Get this player's hand
+                const { data: myPlayer } = await supabaseAdmin
+                    .from('uno_players')
+                    .select('hand')
+                    .eq('room_id', roomId)
+                    .eq('user_id', userId)
+                    .single();
 
                 socket.emit('roomState', {
                     room,
                     players: playersWithCounts,
-                    myHand: myPlayerData?.hand || []
+                    myHand: myPlayer?.hand || []
                 });
 
-                // Broadcast full updated player list to all players in room (including the new joiner)
-                // This ensures everyone has the latest player data
-                unoNamespace.to(roomId).emit('playersUpdated', {
-                    players: playersWithCounts
-                });
-
-                // Also send notification for toast message
+                // Notify others that player joined/reconnected
                 socket.to(roomId).emit('playerJoined', { userId });
 
             } catch (err) {
