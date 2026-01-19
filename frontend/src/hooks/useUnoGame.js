@@ -108,87 +108,15 @@ const useUnoGame = (roomId) => {
         });
 
         return () => {
+            // Emit leaveRoom before disconnecting so player is properly removed
+            socket.emit('leaveRoom', { roomId });
             socket.disconnect();
         };
     }, [roomId, user?.id, navigate, players]);
 
-    // Subscribe to real-time updates
-    useEffect(() => {
-        if (!roomId) return;
-
-        // Subscribe to room changes
-        const roomSubscription = supabase
-            .channel(`uno-room-${roomId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'uno_rooms',
-                filter: `id=eq.${roomId}`
-            }, (payload) => {
-                if (payload.new) {
-                    setRoom(payload.new);
-                }
-            })
-            .subscribe();
-
-        // Subscribe to player changes
-        const playerSubscription = supabase
-            .channel(`uno-players-${roomId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'uno_players',
-                filter: `room_id=eq.${roomId}`
-            }, async (payload) => {
-                // Refetch players to get updated data
-                const { data } = await supabase
-                    .from('uno_players')
-                    .select('*')
-                    .eq('room_id', roomId);
-
-                if (data) {
-                    setPlayers(data);
-                    // Update my hand if I'm in the game
-                    const myPlayerData = data.find(p => String(p.user_id) === String(user?.id));
-                    if (myPlayerData?.hand) {
-                        setMyHand(myPlayerData.hand);
-                    }
-                }
-            })
-            .subscribe();
-
-        // Polling fallback - refetch every 2 seconds for reliable sync
-        const pollInterval = setInterval(async () => {
-            const { data: roomData } = await supabase
-                .from('uno_rooms')
-                .select('*')
-                .eq('id', roomId)
-                .single();
-
-            if (roomData) {
-                setRoom(roomData);
-            }
-
-            const { data: playersData } = await supabase
-                .from('uno_players')
-                .select('*')
-                .eq('room_id', roomId);
-
-            if (playersData) {
-                setPlayers(playersData);
-                const myPlayerData = playersData.find(p => String(p.user_id) === String(user?.id));
-                if (myPlayerData?.hand) {
-                    setMyHand(myPlayerData.hand);
-                }
-            }
-        }, 2000);
-
-        return () => {
-            roomSubscription.unsubscribe();
-            playerSubscription.unsubscribe();
-            clearInterval(pollInterval);
-        };
-    }, [roomId, user?.id]);
+    // NOTE: All real-time updates are handled by Socket.io (lines 28-115)
+    // Removed redundant Supabase Realtime subscriptions and 2-second polling
+    // to reduce egress - Socket.io provides roomUpdated/playerUpdated events
 
     // Fetch initial room data
     useEffect(() => {
@@ -318,15 +246,8 @@ const useUnoGame = (roomId) => {
             if (error) throw error;
             if (!data.success) throw new Error(data.error);
 
-            // Refetch players to ensure sync
-            const { data: playersData } = await supabase
-                .from('uno_players')
-                .select('*')
-                .eq('room_id', roomId);
-
-            if (playersData) {
-                setPlayers(playersData);
-            }
+            // Socket.io will broadcast the update via playerUpdated event
+            // No need to refetch - optimistic update is sufficient
 
         } catch (err) {
             toast.error(err.message);

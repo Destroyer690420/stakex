@@ -292,7 +292,9 @@ BEGIN
     END IF;
     
     IF EXISTS (SELECT 1 FROM uno_players WHERE room_id = p_room_id AND user_id = p_user_id) THEN
-        RETURN jsonb_build_object('success', false, 'error', 'Already in this room');
+        -- Already in room - allow rejoin without charging again
+        SELECT cash INTO v_current_cash FROM public.users WHERE id = p_user_id;
+        RETURN jsonb_build_object('success', true, 'newBalance', v_current_cash, 'alreadyInRoom', true);
     END IF;
     
     SELECT COUNT(*) INTO v_player_count FROM uno_players WHERE room_id = p_room_id;

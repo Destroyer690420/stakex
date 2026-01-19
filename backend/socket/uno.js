@@ -67,11 +67,22 @@ module.exports = (io) => {
         })
         .subscribe();
 
-    function handleLeaveRoom(socket, roomId) {
+    async function handleLeaveRoom(socket, roomId) {
         socket.leave(roomId);
         const playerInfo = playerSockets.get(socket.id);
 
         if (playerInfo) {
+            // Call database to remove player from room
+            try {
+                await supabaseAdmin.rpc('fn_leave_uno_room', {
+                    p_user_id: playerInfo.userId,
+                    p_room_id: roomId
+                });
+                console.log(`🎴 Player ${playerInfo.userId} left room ${roomId}`);
+            } catch (err) {
+                console.error('Error leaving room:', err);
+            }
+
             socket.to(roomId).emit('playerLeft', { userId: playerInfo.userId });
             playerSockets.delete(socket.id);
         }
@@ -121,40 +132,39 @@ module.exports = (io) => {
 
             // Fetch and send current room state
             try {
+                // Consolidated query: Get room with all players in one request
                 const { data: room } = await supabaseAdmin
                     .from('uno_rooms')
                     .select('*')
                     .eq('id', roomId)
                     .single();
 
-                const { data: players } = await supabaseAdmin
+                // Get all players with their hands in a single query
+                const { data: allPlayers } = await supabaseAdmin
                     .from('uno_players')
-                    .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno')
+                    .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno, hand')
                     .eq('room_id', roomId);
 
-                // Get player counts for each player
-                const { data: handCounts } = await supabaseAdmin
-                    .from('uno_players')
-                    .select('user_id, hand')
-                    .eq('room_id', roomId);
-
-                const playersWithCounts = players?.map(p => ({
-                    ...p,
-                    hand_count: handCounts?.find(h => h.user_id === p.user_id)?.hand?.length || 0
+                // Process players - hide other players' hands, calculate counts
+                const myPlayerData = allPlayers?.find(p => p.user_id === userId);
+                const playersWithCounts = allPlayers?.map(p => ({
+                    id: p.id,
+                    room_id: p.room_id,
+                    user_id: p.user_id,
+                    username: p.username,
+                    avatar_url: p.avatar_url,
+                    seat_index: p.seat_index,
+                    is_ready: p.is_ready,
+                    has_paid: p.has_paid,
+                    has_called_uno: p.has_called_uno,
+                    hand_count: p.hand?.length || 0
+                    // Don't expose hand to other players
                 }));
-
-                // Get this player's hand
-                const { data: myPlayer } = await supabaseAdmin
-                    .from('uno_players')
-                    .select('hand')
-                    .eq('room_id', roomId)
-                    .eq('user_id', userId)
-                    .single();
 
                 socket.emit('roomState', {
                     room,
                     players: playersWithCounts,
-                    myHand: myPlayer?.hand || []
+                    myHand: myPlayerData?.hand || []
                 });
 
                 // Notify others that player joined/reconnected

@@ -40,6 +40,13 @@ const UnoGame = () => {
     const [showWinOverlay, setShowWinOverlay] = useState(false);
 
     const timerRef = useRef(null);
+    const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setScreenWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Get my player info - use string comparison for UUIDs
     const myPlayer = players.find(p => String(p.user_id) === String(user?.id));
@@ -485,13 +492,36 @@ const UnoGame = () => {
                                     const colorClass = card.type === 'wild' ? 'wild' : card.color;
                                     const isSpecial = ['skip', 'reverse', '+2', '+4'].includes(card.value);
 
-                                    // Dynamic card sizing based on hand size
                                     const cardCount = myHand.length;
-                                    // Calculate margin: more overlap when more cards
-                                    let marginLeft = index === 0 ? 0 : Math.max(-70, Math.min(-30, -85 + (cardCount * 3)));
-                                    // Scale cards down slightly when there are many
-                                    const scale = cardCount > 15 ? 0.85 : cardCount > 10 ? 0.9 : 1;
-                                    const cardWidth = 95 * scale;
+                                    const baseScale = cardCount > 15 ? 0.85 : cardCount > 10 ? 0.9 : 1;
+                                    const cardWidth = 95 * baseScale;
+
+                                    // Dynamic overlap calculation
+                                    // Dynamic overlap calculation
+                                    // Use 90% of screen width or max 800px for hand container
+                                    const availableWidth = Math.min(screenWidth * 0.95, 800);
+
+                                    // Default margin (standard overlap)
+                                    let overlap = -30;
+
+                                    // If total width exceeds available width, compress
+                                    // Total width = cardWidth + (count-1) * (cardWidth + margin)
+                                    // We want Total width <= availableWidth
+                                    // margin <= (availableWidth - cardWidth) / (count - 1) - cardWidth
+
+                                    if (cardCount > 1) {
+                                        const maxTotalWidth = cardWidth + (cardCount - 1) * (cardWidth + overlap);
+                                        if (maxTotalWidth > availableWidth) {
+                                            const newMargin = (availableWidth - cardWidth) / (cardCount - 1) - cardWidth;
+                                            // Cap the overlap to avoid extreme squeezing if possible, but prioritize fitting
+                                            overlap = Math.min(overlap, newMargin);
+                                        }
+                                    }
+
+                                    let marginLeft = index === 0 ? 0 : overlap;
+
+                                    // Hover effect needs to be handled carefully with heavy overlap
+                                    // We'll rely on z-index which is already set by index
 
                                     return (
                                         <motion.div
@@ -501,12 +531,24 @@ const UnoGame = () => {
                                                 zIndex: index,
                                                 marginLeft: `${marginLeft}px`,
                                                 width: `${cardWidth}px`,
-                                                height: `${135 * scale}px`,
-                                                transform: `scale(${scale})`,
+                                                height: `${135 * baseScale}px`,
+                                                transformOrigin: 'bottom center',
+                                                // We don't use scale here to avoid messing up the layout calculation
+                                                // The baseScale is applied to width/height directly
                                             }}
                                             onClick={() => handleCardClick(index)}
-                                            initial={{ opacity: 0, y: -100, scale: 0.5 }}
-                                            animate={{ opacity: 1, y: 0, scale: scale }}
+                                            initial={{ opacity: 0, y: 100 }}
+                                            animate={{
+                                                opacity: 1,
+                                                y: 0,
+                                                scale: 1, // Reset scale as we apply it to dimensions
+                                            }}
+                                            whileHover={{
+                                                y: -30,
+                                                zIndex: 100,
+                                                scale: 1.1,
+                                                transition: { duration: 0.2 }
+                                            }}
                                             exit={{
                                                 opacity: 0,
                                                 y: -300,

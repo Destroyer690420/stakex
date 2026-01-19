@@ -21,6 +21,10 @@ let roundStartTime = null;
 let isCrashing = false;
 let io = null;
 
+// In-memory bet cache to avoid querying DB every 100ms tick
+// Map: roundId -> Map(uniqueKey -> betData)
+const activeBetsCache = new Map();
+
 /**
  * Generate provably fair crash point
  * Uses SHA256 hash of server seed
@@ -165,25 +169,30 @@ async function gameTick() {
 }
 
 /**
- * Process auto cashouts
+ * Process auto cashouts - uses in-memory cache instead of DB query every tick
  */
 async function processAutoCashouts(currentMultiplier) {
     if (!currentRound) return;
 
-    // Get active bets with auto cashout <= current multiplier
-    const { data: bets, error } = await supabase
-        .from('crash_bets')
-        .select('*')
-        .eq('round_id', currentRound.id)
-        .eq('status', 'active')
-        .not('auto_cashout', 'is', null)
-        .lte('auto_cashout', currentMultiplier);
+    // Use cached bets instead of querying DB every 100ms
+    const roundBets = activeBetsCache.get(currentRound.id);
+    if (!roundBets || roundBets.size === 0) return;
 
-    if (error || !bets) return;
+    // Find bets with auto cashout <= current multiplier
+    const betsToProcess = [];
+    for (const [betKey, bet] of roundBets) {
+        if (bet.auto_cashout && bet.auto_cashout <= currentMultiplier && bet.status === 'active') {
+            betsToProcess.push({ betKey, bet });
+        }
+    }
 
     // Process each auto cashout
-    for (const bet of bets) {
-        await cashOutBet(bet.user_id, bet.bet_number, bet.auto_cashout);
+    for (const { betKey, bet } of betsToProcess) {
+        const result = await cashOutBet(bet.user_id, bet.bet_number, bet.auto_cashout);
+        if (result?.success) {
+            // Remove from cache after successful cashout
+            roundBets.delete(betKey);
+        }
     }
 }
 
@@ -259,6 +268,9 @@ async function handleCrash(crashPoint) {
     currentRound = null;
     roundStartTime = null;
 
+    // Clear bet cache for this round to prevent memory leak
+    activeBetsCache.delete(round.id);
+
     // Update round status in DB
     try {
         await supabase
@@ -327,6 +339,19 @@ async function handlePlaceBet(socket, data) {
     socket.emit('bet_result', betResult);
 
     if (result?.success) {
+        // Add bet to in-memory cache for auto-cashout processing
+        if (!activeBetsCache.has(currentRound.id)) {
+            activeBetsCache.set(currentRound.id, new Map());
+        }
+        const betKey = `${userId}_${betNumber}`;
+        activeBetsCache.get(currentRound.id).set(betKey, {
+            user_id: userId,
+            bet_number: betNumber,
+            amount: amount,
+            auto_cashout: autoCashout || null,
+            status: 'active'
+        });
+
         // Get user info for broadcast
         const { data: user } = await supabase
             .from('users')
@@ -375,6 +400,15 @@ async function handleCashOut(socket, data) {
     }
 
     const result = await cashOutBet(userId, betNumber, finalMultiplier);
+
+    // Remove from cache after successful manual cashout
+    if (result?.success && currentRound) {
+        const roundBets = activeBetsCache.get(currentRound.id);
+        if (roundBets) {
+            roundBets.delete(`${userId}_${betNumber}`);
+        }
+    }
+
     socket.emit('cashout_result', result);
 }
 
