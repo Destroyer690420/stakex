@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './UnoWaitingRoom.css';
-import toast from 'react-hot-toast';
 
 const UnoWaitingRoom = ({
     room,

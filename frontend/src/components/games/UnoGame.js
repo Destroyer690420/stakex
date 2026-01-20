@@ -172,9 +172,6 @@ const UnoGame = () => {
         navigate('/games/uno');
     };
 
-    const allPlayersReady = players.length >= 2 &&
-        players.every(p => p.is_ready || p.user_id === room?.host_id);
-
     // Render card value display
     const getCardDisplay = (value) => {
         if (value === 'skip') return '⊘';
