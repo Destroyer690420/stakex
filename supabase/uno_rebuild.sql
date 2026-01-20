@@ -9,6 +9,23 @@ DROP TABLE IF EXISTS uno_hidden_states CASCADE;
 DROP TABLE IF EXISTS uno_public_states CASCADE;
 DROP TABLE IF EXISTS uno_rooms CASCADE;
 
+-- Drop all existing functions to prevent signature conflicts
+DROP FUNCTION IF EXISTS fn_create_uno_room(uuid, numeric, integer);
+DROP FUNCTION IF EXISTS fn_join_uno_room(uuid, uuid);
+DROP FUNCTION IF EXISTS fn_uno_toggle_ready(uuid, uuid);
+DROP FUNCTION IF EXISTS fn_start_uno(uuid, uuid);
+DROP FUNCTION IF EXISTS fn_start_uno_game(uuid, uuid); -- Legacy name
+DROP FUNCTION IF EXISTS fn_play_card(uuid, uuid, integer, text);
+DROP FUNCTION IF EXISTS fn_uno_play_card(uuid, uuid, integer, text); -- Legacy name
+DROP FUNCTION IF EXISTS fn_draw_card(uuid, uuid);
+DROP FUNCTION IF EXISTS fn_uno_draw_card(uuid, uuid); -- Legacy name
+DROP FUNCTION IF EXISTS fn_leave_uno_room(uuid, uuid);
+DROP FUNCTION IF EXISTS fn_delete_uno_room(uuid, uuid);
+DROP FUNCTION IF EXISTS fn_get_uno_rooms();
+DROP FUNCTION IF EXISTS fn_uno_call_uno(uuid, uuid); -- Legacy name
+DROP FUNCTION IF EXISTS generate_uno_deck();
+DROP FUNCTION IF EXISTS shuffle_deck(jsonb);
+
 -- ========================================
 -- UNIFIED TABLE: uno_rooms
 -- All game state in one place
