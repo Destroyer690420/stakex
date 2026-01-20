@@ -15,10 +15,23 @@ const TURN_DURATION = 15;
  * When the turn changes, the key changes, forcing React to 
  * unmount and remount this component - giving us a fresh timer.
  */
-const TurnTimer = ({ isMyTurn, onTimeout, currentTurnIndex }) => {
+const TurnTimer = ({ isMyTurn, onTimeout }) => {
     const [timeLeft, setTimeLeft] = useState(TURN_DURATION);
     const timerRef = useRef(null);
     const hasTimedOut = useRef(false);
+
+    // Use refs to avoid stale closures while keeping mount-only useEffect
+    const isMyTurnRef = useRef(isMyTurn);
+    const onTimeoutRef = useRef(onTimeout);
+
+    // Keep refs updated
+    useEffect(() => {
+        isMyTurnRef.current = isMyTurn;
+    }, [isMyTurn]);
+
+    useEffect(() => {
+        onTimeoutRef.current = onTimeout;
+    }, [onTimeout]);
 
     useEffect(() => {
         // Reset state on mount
@@ -30,14 +43,14 @@ const TurnTimer = ({ isMyTurn, onTimeout, currentTurnIndex }) => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     // Timeout! Only trigger if it's my turn
-                    if (isMyTurn && !hasTimedOut.current) {
+                    if (isMyTurnRef.current && !hasTimedOut.current) {
                         hasTimedOut.current = true;
                         // Call timeout handler in next tick
                         setTimeout(() => {
-                            if (onTimeout) onTimeout();
+                            if (onTimeoutRef.current) onTimeoutRef.current();
                         }, 0);
                     }
-                    return TURN_DURATION; // Reset for visual feedback
+                    return TURN_DURATION;
                 }
                 return prev - 1;
             });
@@ -50,7 +63,7 @@ const TurnTimer = ({ isMyTurn, onTimeout, currentTurnIndex }) => {
                 timerRef.current = null;
             }
         };
-    }, []); // Empty deps - only run on mount (key change = new mount)
+    }, []);
 
     const timerPercentage = (timeLeft / TURN_DURATION) * 100;
 
