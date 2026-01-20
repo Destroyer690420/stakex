@@ -112,6 +112,7 @@ const useUnoGame = (roomId) => {
             socket.emit('leaveRoom', { roomId });
             socket.disconnect();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roomId, user?.id]);
 
     // Real-time updates are now handled exclusively through Socket.IO
