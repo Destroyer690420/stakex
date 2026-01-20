@@ -35,24 +35,36 @@ const LandscapeUnoGame = () => {
     const [turnTimeLeft, setTurnTimeLeft] = useState(TURN_DURATION);
     const [hoveredCard, setHoveredCard] = useState(null);
 
+    // Use refs to avoid dependency issues in timer
     const timerRef = useRef(null);
     const autoDrawnRef = useRef(false);
+    const drawCardRef = useRef(drawCard);
+    const isMyTurnRef = useRef(isMyTurn);
     const handContainerRef = useRef(null);
 
-    // Memoize opponents to avoid recalculation
+    // Keep refs updated
+    useEffect(() => {
+        drawCardRef.current = drawCard;
+    }, [drawCard]);
+
+    useEffect(() => {
+        isMyTurnRef.current = isMyTurn;
+    }, [isMyTurn]);
+
+    // Memoize opponents
     const opponents = useMemo(() =>
         players.filter(p => String(p.user_id) !== String(user?.id)),
         [players, user?.id]
     );
 
-    // Current player info from room state
+    // Current game state values
     const currentTurnIndex = room?.current_turn_index ?? 0;
     const playerOrder = room?.player_order ?? [];
     const currentPlayerId = playerOrder[currentTurnIndex];
     const gameStatus = room?.status;
 
     // ========================================
-    // TURN TIMER - Only runs during active game
+    // TURN TIMER - Stable implementation
     // ========================================
     useEffect(() => {
         // Clear any existing timer
@@ -63,31 +75,37 @@ const LandscapeUnoGame = () => {
 
         // Only run timer during active game
         if (gameStatus !== 'playing') {
+            setTurnTimeLeft(TURN_DURATION);
             return;
         }
 
-        // Reset timer and auto-draw flag when turn changes
+        // Reset timer when turn changes
         setTurnTimeLeft(TURN_DURATION);
         autoDrawnRef.current = false;
 
-        // Start countdown
+        // Start countdown - use refs for callbacks to avoid dependency issues
         timerRef.current = setInterval(() => {
             setTurnTimeLeft(prev => {
-                if (prev <= 1) {
-                    // Time's up!
-                    if (isMyTurn && !autoDrawnRef.current) {
+                const newTime = prev - 1;
+
+                // Check for timeout
+                if (newTime <= 0) {
+                    // Auto-draw only if it's my turn and hasn't been done yet
+                    if (isMyTurnRef.current && !autoDrawnRef.current) {
                         autoDrawnRef.current = true;
-                        // Auto-draw in next tick to avoid state conflicts
+                        // Execute draw in next tick
                         setTimeout(() => {
-                            drawCard().catch(err => {
-                                console.error('Auto-draw failed:', err);
-                                toast.error('Failed to auto-draw');
-                            });
+                            if (drawCardRef.current) {
+                                drawCardRef.current().catch(err => {
+                                    console.error('Auto-draw failed:', err);
+                                });
+                            }
                         }, 0);
                     }
-                    return TURN_DURATION; // Reset for next player
+                    return TURN_DURATION;
                 }
-                return prev - 1;
+
+                return newTime;
             });
         }, 1000);
 
@@ -97,7 +115,7 @@ const LandscapeUnoGame = () => {
                 timerRef.current = null;
             }
         };
-    }, [currentTurnIndex, gameStatus, isMyTurn, drawCard]);
+    }, [currentTurnIndex, gameStatus]); // Only depends on turn index and game status
 
     // ========================================
     // CARD CLICK HANDLER
@@ -133,7 +151,7 @@ const LandscapeUnoGame = () => {
     }, [isMyTurn, isSending, myHand, isCardPlayable, playCard]);
 
     // ========================================
-    // COLOR PICKER FOR WILD CARDS
+    // COLOR PICKER
     // ========================================
     const handleColorSelect = async (color) => {
         setShowColorPicker(false);
@@ -144,7 +162,7 @@ const LandscapeUnoGame = () => {
     };
 
     // ========================================
-    // DRAW CARD HANDLER
+    // DRAW CARD
     // ========================================
     const handleDrawCard = async () => {
         if (!isMyTurn) {
@@ -155,7 +173,7 @@ const LandscapeUnoGame = () => {
     };
 
     // ========================================
-    // LEAVE ROOM HANDLER
+    // LEAVE ROOM
     // ========================================
     const handleLeave = async () => {
         await leaveRoom();
@@ -174,12 +192,10 @@ const LandscapeUnoGame = () => {
         return value;
     };
 
-    // Check if a specific player is the current player
     const isPlayerActive = useCallback((player) => {
         return String(currentPlayerId) === String(player?.user_id);
     }, [currentPlayerId]);
 
-    // Get current player's display name
     const getCurrentPlayerName = useCallback(() => {
         if (String(currentPlayerId) === String(user?.id)) {
             return 'Your Turn';
@@ -188,11 +204,10 @@ const LandscapeUnoGame = () => {
         return player?.username || 'Waiting...';
     }, [currentPlayerId, user?.id, players]);
 
-    // Calculate timer percentage
     const timerPercentage = (turnTimeLeft / TURN_DURATION) * 100;
 
     // ========================================
-    // CARD LAYOUT CALCULATION
+    // CARD LAYOUT
     // ========================================
     const calculateCardLayout = () => {
         const cardCount = myHand.length;
@@ -214,7 +229,6 @@ const LandscapeUnoGame = () => {
     // RENDER STATES
     // ========================================
 
-    // Loading
     if (loading) {
         return (
             <div className="landscape-uno-wrapper">
@@ -226,7 +240,6 @@ const LandscapeUnoGame = () => {
         );
     }
 
-    // Error
     if (error || !room) {
         return (
             <div className="landscape-uno-wrapper">
@@ -241,7 +254,7 @@ const LandscapeUnoGame = () => {
         );
     }
 
-    // Game Over - Winner Video
+    // Game Over
     if (gameStatus === 'finished') {
         const isWinner = String(room.winner_id) === String(user?.id);
 
@@ -265,7 +278,6 @@ const LandscapeUnoGame = () => {
             );
         }
 
-        // Loser screen
         return (
             <div className="landscape-uno-wrapper">
                 <div className="landscape-uno-gameover">
@@ -281,17 +293,17 @@ const LandscapeUnoGame = () => {
     }
 
     // ========================================
-    // ACTIVE GAME RENDER
+    // ACTIVE GAME
     // ========================================
     return (
         <div className="landscape-uno-wrapper">
             {/* Quit Button */}
             <button className="landscape-quit-btn" onClick={handleLeave}>✕</button>
 
-            {/* Top Navigation Bar - Player Names */}
+            {/* Top Bar with Player Names */}
             <div className="landscape-top-bar">
                 <div className="landscape-players-bar">
-                    {/* Current User (Always First) */}
+                    {/* Me */}
                     <div className={`player-name-item ${isMyTurn ? 'active' : ''}`}>
                         {user?.username || 'You'}
                         <span className="player-card-count">{myHand.length}</span>
@@ -310,7 +322,7 @@ const LandscapeUnoGame = () => {
                 </div>
             </div>
 
-            {/* Central Game Arena */}
+            {/* Central Arena */}
             <div className="landscape-arena">
                 <div className="landscape-deck-container">
                     {/* Draw Pile */}
@@ -351,7 +363,7 @@ const LandscapeUnoGame = () => {
                     </div>
                 </div>
 
-                {/* Current Color Indicator */}
+                {/* Color Indicator */}
                 <div className={`landscape-color-indicator ${room.current_color}`}></div>
             </div>
 
@@ -359,11 +371,7 @@ const LandscapeUnoGame = () => {
             <div className={`landscape-turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
                 <div className="timer-ring-container">
                     <svg className="timer-ring" viewBox="0 0 36 36">
-                        <circle
-                            className="timer-ring-bg"
-                            cx="18" cy="18" r="16"
-                            fill="none" strokeWidth="2"
-                        />
+                        <circle className="timer-ring-bg" cx="18" cy="18" r="16" fill="none" strokeWidth="2" />
                         <circle
                             className={`timer-ring-progress ${isMyTurn ? 'my-turn' : ''}`}
                             cx="18" cy="18" r="16"
@@ -446,7 +454,7 @@ const LandscapeUnoGame = () => {
                 </motion.button>
             )}
 
-            {/* Color Picker Modal */}
+            {/* Color Picker */}
             <AnimatePresence>
                 {showColorPicker && (
                     <motion.div
