@@ -380,10 +380,24 @@ const Aviator = () => {
         };
     }, [drawGame]);
 
-    // Socket connection
+    // Socket connection - WebSocket ONLY (no XHR polling fallback)
     useEffect(() => {
-        socketRef.current = io(SOCKET_URL);
+        // Prevent duplicate connections on React StrictMode double-mount
+        if (socketRef.current?.connected) {
+            console.log('[Aviator] Socket already connected, skipping init');
+            return;
+        }
 
+        // Force WebSocket-only transport - eliminates XHR polling entirely
+        socketRef.current = io(SOCKET_URL, {
+            transports: ['websocket'],  // CRITICAL: No polling fallback
+            upgrade: false,              // Don't try to upgrade from polling
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 20000
+        });
+
+        console.log('[Aviator] Socket initialized with WebSocket-only transport');
         socketRef.current.emit('join_aviator');
 
         socketRef.current.on('game_state', (data) => {
