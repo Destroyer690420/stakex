@@ -196,6 +196,8 @@ const useUnoGame = (roomId) => {
 
             refreshUser();
             toast.success('Joined room!');
+            // Request room state broadcast to all players
+            socketRef.current?.emit('requestRoomState', { roomId });
             return { success: true };
 
         } catch (err) {
@@ -246,24 +248,13 @@ const useUnoGame = (roomId) => {
             if (error) throw error;
             if (!data.success) throw new Error(data.error);
 
-            // Refetch players to ensure sync
-            const { data: playersData } = await supabase
-                .from('uno_players')
-                .select('*')
-                .eq('room_id', roomId);
-
-            if (playersData) {
-                setPlayers(playersData);
-            }
+            // Request room state broadcast via Socket.IO (no Supabase egress)
+            socketRef.current?.emit('requestRoomState', { roomId });
 
         } catch (err) {
             toast.error(err.message);
-            // Revert optimistic update on error
-            const { data: playersData } = await supabase
-                .from('uno_players')
-                .select('*')
-                .eq('room_id', roomId);
-            if (playersData) setPlayers(playersData);
+            // Revert optimistic update on error - request fresh state
+            socketRef.current?.emit('requestRoomState', { roomId });
         }
     }, [roomId, user?.id]);
 

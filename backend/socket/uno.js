@@ -30,42 +30,61 @@ module.exports = (io) => {
         }
     }, CLEANUP_INTERVAL);
 
-    // Subscribe to Supabase realtime for room updates
-    const roomChannel = supabaseAdmin
-        .channel('uno-rooms-changes')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'uno_rooms'
-        }, (payload) => {
-            const roomId = payload.new?.id || payload.old?.id;
-            if (roomId && activeRooms.has(roomId)) {
-                // Broadcast room update to all players in this room
-                unoNamespace.to(roomId).emit('roomUpdated', payload.new || { deleted: true });
-            }
-        })
-        .subscribe();
+    // Helper function to broadcast full room state to all players
+    async function broadcastRoomState(roomId) {
+        try {
+            const { data: room } = await supabaseAdmin
+                .from('uno_rooms')
+                .select('*')
+                .eq('id', roomId)
+                .single();
 
-    const playerChannel = supabaseAdmin
-        .channel('uno-players-changes')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'uno_players'
-        }, (payload) => {
-            const roomId = payload.new?.room_id || payload.old?.room_id;
-            if (roomId && activeRooms.has(roomId)) {
-                // Broadcast player updates (without revealing hands)
-                const playerData = payload.new ? {
-                    ...payload.new,
-                    hand: undefined, // Don't reveal hand
-                    hand_count: payload.new.hand ? JSON.parse(JSON.stringify(payload.new.hand)).length : 0
-                } : { deleted: true, user_id: payload.old?.user_id };
+            if (!room) return;
 
-                unoNamespace.to(roomId).emit('playerUpdated', playerData);
+            const { data: players } = await supabaseAdmin
+                .from('uno_players')
+                .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno, hand')
+                .eq('room_id', roomId);
+
+            // Get all sockets in this room and send personalized state
+            const roomSockets = activeRooms.get(roomId);
+            if (!roomSockets) return;
+
+            for (const socketId of roomSockets) {
+                const playerInfo = playerSockets.get(socketId);
+                if (!playerInfo) continue;
+
+                const socket = unoNamespace.sockets.get(socketId);
+                if (!socket) continue;
+
+                // Find this player's hand
+                const myPlayerData = players?.find(p => p.user_id === playerInfo.userId);
+                const myHand = myPlayerData?.hand || [];
+
+                // Build players list with hand counts (not actual hands)
+                const playersWithCounts = players?.map(p => ({
+                    id: p.id,
+                    room_id: p.room_id,
+                    user_id: p.user_id,
+                    username: p.username,
+                    avatar_url: p.avatar_url,
+                    seat_index: p.seat_index,
+                    is_ready: p.is_ready,
+                    has_paid: p.has_paid,
+                    has_called_uno: p.has_called_uno,
+                    hand_count: p.hand?.length || 0
+                }));
+
+                socket.emit('roomState', {
+                    room,
+                    players: playersWithCounts,
+                    myHand
+                });
             }
-        })
-        .subscribe();
+        } catch (err) {
+            console.error('Error broadcasting room state:', err);
+        }
+    }
 
     async function handleLeaveRoom(socket, roomId) {
         socket.leave(roomId);
@@ -85,6 +104,9 @@ module.exports = (io) => {
 
             socket.to(roomId).emit('playerLeft', { userId: playerInfo.userId });
             playerSockets.delete(socket.id);
+
+            // Broadcast updated state to remaining players
+            await broadcastRoomState(roomId);
         }
 
         const roomSockets = activeRooms.get(roomId);
@@ -130,7 +152,7 @@ module.exports = (io) => {
             }
             activeRooms.get(roomId).add(socket.id);
 
-            // Fetch and send current room state
+            // Fetch and send current room state to this player
             try {
                 const { data: room } = await supabaseAdmin
                     .from('uno_rooms')
@@ -140,36 +162,36 @@ module.exports = (io) => {
 
                 const { data: players } = await supabaseAdmin
                     .from('uno_players')
-                    .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno')
-                    .eq('room_id', roomId);
-
-                // Get player counts for each player
-                const { data: handCounts } = await supabaseAdmin
-                    .from('uno_players')
-                    .select('user_id, hand')
+                    .select('id, room_id, user_id, username, avatar_url, seat_index, is_ready, has_paid, has_called_uno, hand')
                     .eq('room_id', roomId);
 
                 const playersWithCounts = players?.map(p => ({
-                    ...p,
-                    hand_count: handCounts?.find(h => h.user_id === p.user_id)?.hand?.length || 0
+                    id: p.id,
+                    room_id: p.room_id,
+                    user_id: p.user_id,
+                    username: p.username,
+                    avatar_url: p.avatar_url,
+                    seat_index: p.seat_index,
+                    is_ready: p.is_ready,
+                    has_paid: p.has_paid,
+                    has_called_uno: p.has_called_uno,
+                    hand_count: p.hand?.length || 0
                 }));
 
                 // Get this player's hand
-                const { data: myPlayer } = await supabaseAdmin
-                    .from('uno_players')
-                    .select('hand')
-                    .eq('room_id', roomId)
-                    .eq('user_id', userId)
-                    .single();
+                const myPlayerData = players?.find(p => p.user_id === userId);
 
                 socket.emit('roomState', {
                     room,
                     players: playersWithCounts,
-                    myHand: myPlayer?.hand || []
+                    myHand: myPlayerData?.hand || []
                 });
 
-                // Notify others that player joined/reconnected
+                // Notify others that player joined/reconnected and broadcast updated state
                 socket.to(roomId).emit('playerJoined', { userId });
+
+                // Broadcast to all (including newly joined) after a small delay
+                setTimeout(() => broadcastRoomState(roomId), 100);
 
             } catch (err) {
                 console.error('Error fetching room state:', err);
@@ -177,19 +199,28 @@ module.exports = (io) => {
             }
         });
 
+        // Request fresh room state (called after actions like toggleReady, playCard, etc.)
+        socket.on('requestRoomState', async ({ roomId }) => {
+            if (!roomId) return;
+            await broadcastRoomState(roomId);
+        });
+
         // Leave room
         socket.on('leaveRoom', ({ roomId }) => {
             handleLeaveRoom(socket, roomId);
         });
 
-        // Card played notification
-        socket.on('cardPlayed', ({ roomId, card, playerId, newColor }) => {
+        // Card played - broadcast updated state to all
+        socket.on('cardPlayed', async ({ roomId, card, playerId, newColor }) => {
             socket.to(roomId).emit('cardPlayed', { card, playerId, newColor });
+            // Broadcast full state so everyone sees the update
+            await broadcastRoomState(roomId);
         });
 
-        // Card drawn notification
-        socket.on('cardDrawn', ({ roomId, playerId }) => {
+        // Card drawn - broadcast updated state
+        socket.on('cardDrawn', async ({ roomId, playerId }) => {
             socket.to(roomId).emit('cardDrawn', { playerId });
+            await broadcastRoomState(roomId);
         });
 
         // UNO called
@@ -197,9 +228,10 @@ module.exports = (io) => {
             unoNamespace.to(roomId).emit('unoCall', { userId, username });
         });
 
-        // Game started
-        socket.on('gameStarted', ({ roomId }) => {
+        // Game started - broadcast full state
+        socket.on('gameStarted', async ({ roomId }) => {
             unoNamespace.to(roomId).emit('gameStarted');
+            await broadcastRoomState(roomId);
         });
 
         // Turn timeout - auto draw
@@ -210,11 +242,13 @@ module.exports = (io) => {
             try {
                 // Force draw a card for the timed-out player
                 const { data, error } = await supabaseAdmin.rpc('fn_uno_draw_card', {
+                    p_user_id: userId,
                     p_room_id: roomId
                 });
 
                 if (!error && data?.success) {
                     unoNamespace.to(roomId).emit('autoDrawn', { userId });
+                    await broadcastRoomState(roomId);
                 }
             } catch (err) {
                 console.error('Turn timeout error:', err);
@@ -253,6 +287,7 @@ module.exports = (io) => {
 
                     // Notify room
                     unoNamespace.to(roomId).emit('playerForfeited', { userId });
+                    await broadcastRoomState(roomId);
 
                 } catch (err) {
                     console.error('Forfeit error:', err);
