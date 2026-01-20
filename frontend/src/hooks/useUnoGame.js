@@ -5,12 +5,12 @@ import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 /**
- * UNO Game Hook - Complete Rewrite
+ * UNO Game Hook - Refactored with Strict Turn Logic
  * 
- * Architecture:
- * - Realtime subscription to uno_public_states (lightweight)
- * - On-demand fetches for hand and players
- * - Optimistic UI updates for smoother UX
+ * Key changes:
+ * 1. isMyTurn computed using seat_index comparison (not player_order array lookup)
+ * 2. currentTurnIndex exposed for timer key prop (forces timer remount)
+ * 3. All turn-related state derived from single source: publicState.current_turn_index
  */
 const useUnoGame = (roomId) => {
     const navigate = useNavigate();
@@ -19,20 +19,54 @@ const useUnoGame = (roomId) => {
     // ========================================
     // STATE
     // ========================================
-    const [room, setRoom] = useState(null);           // uno_rooms data
-    const [publicState, setPublicState] = useState(null); // uno_public_states data
-    const [players, setPlayers] = useState([]);       // uno_players data
-    const [myHand, setMyHand] = useState([]);         // Player's cards
+    const [room, setRoom] = useState(null);
+    const [publicState, setPublicState] = useState(null);
+    const [players, setPlayers] = useState([]);
+    const [myHand, setMyHand] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSending, setIsSending] = useState(false);
 
-    // Refs to track processed events
     const lastProcessedEvent = useRef(null);
 
     // ========================================
-    // COMPUTED VALUES
+    // DERIVED VALUES - Single Source of Truth
     // ========================================
+
+    // My player record from the players array
+    const myPlayer = useMemo(() =>
+        players.find(p => String(p.user_id) === String(user?.id)),
+        [players, user?.id]
+    );
+
+    // My seat index (0-indexed position in the turn order)
+    const mySeatIndex = myPlayer?.seat_index ?? -1;
+
+    // Current turn index from Realtime (the authoritative source)
+    const currentTurnIndex = publicState?.current_turn_index ?? -1;
+
+    // Game status from Realtime
+    const gameStatus = publicState?.status ?? 'waiting';
+
+    /**
+     * STRICT isMyTurn CHECK
+     * Conditions:
+     * 1. Game must be in 'playing' status
+     * 2. My seat_index must match current_turn_index
+     * 3. Both values must be valid (>= 0)
+     */
+    const isMyTurn = useMemo(() => {
+        // Guard: Game must be playing
+        if (gameStatus !== 'playing') return false;
+
+        // Guard: Must have valid seat index
+        if (mySeatIndex < 0 || currentTurnIndex < 0) return false;
+
+        // Strict comparison
+        return mySeatIndex === currentTurnIndex;
+    }, [gameStatus, mySeatIndex, currentTurnIndex]);
+
+    // Merged room object for backward compatibility
     const mergedRoom = useMemo(() => {
         if (!room || !publicState) return null;
         return {
@@ -48,19 +82,20 @@ const useUnoGame = (roomId) => {
         };
     }, [room, publicState]);
 
-    const isMyTurn = useMemo(() => {
-        if (!mergedRoom?.player_order || publicState?.current_turn_index === undefined) return false;
-        const currentPlayerId = mergedRoom.player_order[publicState.current_turn_index];
-        return String(currentPlayerId) === String(user?.id);
-    }, [mergedRoom?.player_order, publicState?.current_turn_index, user?.id]);
-
+    // Current player's user_id (for display purposes)
     const currentPlayer = useMemo(() => {
-        if (!mergedRoom?.player_order || publicState?.current_turn_index === undefined) return null;
-        return mergedRoom.player_order[publicState.current_turn_index];
-    }, [mergedRoom?.player_order, publicState?.current_turn_index]);
+        if (!room?.player_order || currentTurnIndex < 0) return null;
+        return room.player_order[currentTurnIndex];
+    }, [room?.player_order, currentTurnIndex]);
+
+    // Current player's name (for display)
+    const currentPlayerName = useMemo(() => {
+        if (isMyTurn) return 'Your Turn';
+        const player = players.find(p => String(p.user_id) === String(currentPlayer));
+        return player?.username || 'Waiting...';
+    }, [isMyTurn, currentPlayer, players]);
 
     const canCallUno = myHand.length <= 2 && myHand.length > 0;
-    const myPlayer = players.find(p => String(p.user_id) === String(user?.id));
 
     // ========================================
     // DATA FETCHING
@@ -77,7 +112,7 @@ const useUnoGame = (roomId) => {
             if (fetchError) throw fetchError;
             setRoom(data);
         } catch (err) {
-            console.error('Failed to fetch room:', err);
+            console.error('[UNO] Failed to fetch room:', err);
             setError(err.message);
         }
     }, [roomId]);
@@ -94,7 +129,7 @@ const useUnoGame = (roomId) => {
             if (fetchError) throw fetchError;
             setPublicState(data);
         } catch (err) {
-            console.error('Failed to fetch public state:', err);
+            console.error('[UNO] Failed to fetch public state:', err);
         }
     }, [roomId]);
 
@@ -110,7 +145,7 @@ const useUnoGame = (roomId) => {
             if (fetchError) throw fetchError;
             setPlayers(data || []);
         } catch (err) {
-            console.error('Failed to fetch players:', err);
+            console.error('[UNO] Failed to fetch players:', err);
         }
     }, [roomId]);
 
@@ -125,7 +160,7 @@ const useUnoGame = (roomId) => {
             if (fetchError) throw fetchError;
             setMyHand(data || []);
         } catch (err) {
-            console.error('Failed to fetch hand:', err);
+            console.error('[UNO] Failed to fetch hand:', err);
         }
     }, [roomId, user?.id]);
 
@@ -145,9 +180,7 @@ const useUnoGame = (roomId) => {
                 fetchPlayers(),
             ]);
 
-            // Fetch hand after we know the game state
             await fetchMyHand();
-
             setLoading(false);
         };
 
@@ -160,6 +193,8 @@ const useUnoGame = (roomId) => {
     useEffect(() => {
         if (!roomId || !user?.id) return;
 
+        console.log('[UNO] Setting up Realtime subscription for room:', roomId);
+
         const channel = supabase
             .channel(`uno-game-${roomId}`)
             .on('postgres_changes', {
@@ -168,6 +203,8 @@ const useUnoGame = (roomId) => {
                 table: 'uno_public_states',
                 filter: `room_id=eq.${roomId}`
             }, async (payload) => {
+                console.log('[UNO] Realtime event:', payload.eventType, payload.new?.last_event);
+
                 if (payload.eventType === 'DELETE') {
                     toast.error('Room was closed');
                     navigate('/games/uno');
@@ -175,16 +212,20 @@ const useUnoGame = (roomId) => {
                 }
 
                 const newState = payload.new;
+
+                // CRITICAL: Update publicState immediately
+                // This is the single source of truth for turn
                 setPublicState(newState);
 
-                // Create unique event key to avoid duplicate processing
+                // Dedupe events
                 const eventKey = `${newState.last_event}-${newState.updated_at}`;
                 if (eventKey === lastProcessedEvent.current) return;
                 lastProcessedEvent.current = eventKey;
 
-                // Handle events
+                // Handle specific events
                 switch (newState.last_event) {
                     case 'game_started':
+                        console.log('[UNO] Game started, fetching hand and players');
                         await fetchMyHand();
                         await fetchPlayers();
                         toast.success('Game started!');
@@ -192,15 +233,14 @@ const useUnoGame = (roomId) => {
 
                     case 'card_played':
                     case 'card_drawn':
-                        // Always refresh players to get updated hand counts
+                        console.log('[UNO] Card action, refreshing data. New turn index:', newState.current_turn_index);
                         await fetchPlayers();
-                        // Refresh hand if I was involved
                         await fetchMyHand();
                         break;
 
                     case 'player_joined':
                         await fetchPlayers();
-                        await fetchRoom(); // Get updated player_order
+                        await fetchRoom();
                         toast.success('A player joined!');
                         break;
 
@@ -238,12 +278,13 @@ const useUnoGame = (roomId) => {
             .subscribe();
 
         return () => {
+            console.log('[UNO] Cleaning up Realtime subscription');
             channel.unsubscribe();
         };
     }, [roomId, user?.id, navigate, fetchRoom, fetchPlayers, fetchMyHand, refreshUser, players]);
 
     // ========================================
-    // GAME ACTIONS
+    // GAME ACTIONS with Safety Guards
     // ========================================
     const createRoom = useCallback(async (betAmount, maxPlayers = 4) => {
         if (!user?.id) {
@@ -374,7 +415,17 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id]);
 
+    /**
+     * PLAY CARD - With Safety Guard
+     */
     const playCard = useCallback(async (cardIndex, wildColor = null) => {
+        // SAFETY CHECK: Verify it's actually our turn
+        if (!isMyTurn) {
+            console.warn('[UNO] playCard called but isMyTurn is false. Aborting.');
+            toast.error("Not your turn!");
+            return { success: false, error: 'Not your turn' };
+        }
+
         if (!roomId || !user?.id) return { success: false };
         if (isSending) return { success: false, error: 'Already sending' };
 
@@ -391,7 +442,7 @@ const useUnoGame = (roomId) => {
             if (rpcError) throw rpcError;
             if (!data.success) throw new Error(data.error);
 
-            // Update hand optimistically
+            // Optimistic update
             setMyHand(prev => prev.filter((_, i) => i !== cardIndex));
 
             if (data.gameOver) {
@@ -401,15 +452,23 @@ const useUnoGame = (roomId) => {
             return { success: true, data };
         } catch (err) {
             toast.error(err.message);
-            // Refetch hand on error
             await fetchMyHand();
             return { success: false, error: err.message };
         } finally {
             setIsSending(false);
         }
-    }, [roomId, user?.id, isSending, refreshUser, fetchMyHand]);
+    }, [roomId, user?.id, isSending, isMyTurn, refreshUser, fetchMyHand]);
 
+    /**
+     * DRAW CARD - With Safety Guard
+     */
     const drawCard = useCallback(async () => {
+        // SAFETY CHECK: Verify it's actually our turn
+        if (!isMyTurn) {
+            console.warn('[UNO] drawCard called but isMyTurn is false. Aborting.');
+            return { success: false, error: 'Not your turn' };
+        }
+
         if (!roomId || !user?.id) return { success: false };
         if (isSending) return { success: false, error: 'Already sending' };
 
@@ -424,7 +483,6 @@ const useUnoGame = (roomId) => {
             if (rpcError) throw rpcError;
             if (!data.success) throw new Error(data.error);
 
-            // Add drawn card to hand
             if (data.drawnCard) {
                 setMyHand(prev => [...prev, data.drawnCard]);
             }
@@ -437,7 +495,7 @@ const useUnoGame = (roomId) => {
         } finally {
             setIsSending(false);
         }
-    }, [roomId, user?.id, isSending, fetchMyHand]);
+    }, [roomId, user?.id, isSending, isMyTurn, fetchMyHand]);
 
     const shoutUno = useCallback(async () => {
         if (!roomId || !user?.id) return { success: false };
@@ -460,7 +518,6 @@ const useUnoGame = (roomId) => {
     }, [roomId, user?.id]);
 
     const challengeUno = useCallback(async (targetUserId) => {
-        // Placeholder for UNO challenge feature
         toast('Challenge feature coming soon!');
         return { success: false };
     }, []);
@@ -470,21 +527,14 @@ const useUnoGame = (roomId) => {
     // ========================================
     const isCardPlayable = useCallback((card) => {
         if (!publicState || !card) return false;
-
-        // Wild cards can always be played
         if (card.type === 'wild') return true;
-
-        // Match by color
         if (card.color === publicState.current_color) return true;
-
-        // Match by value
         if (card.value === publicState.top_card?.value) return true;
-
         return false;
     }, [publicState]);
 
     // ========================================
-    // RETURN VALUE
+    // RETURN - Expose currentTurnIndex for timer key
     // ========================================
     return {
         room: mergedRoom,
@@ -493,8 +543,15 @@ const useUnoGame = (roomId) => {
         myHand,
         loading,
         error,
+
+        // Turn state - CRITICAL for UI
         isMyTurn,
+        currentTurnIndex,        // Expose for timer key prop
         currentPlayer,
+        currentPlayerName,       // Pre-computed for display
+        mySeatIndex,             // Expose for debugging
+        gameStatus,
+
         canCallUno,
         myPlayer,
         isSending,

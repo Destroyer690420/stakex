@@ -8,6 +8,77 @@ import './LandscapeUno.css';
 
 const TURN_DURATION = 15;
 
+/**
+ * TURN TIMER COMPONENT
+ * 
+ * This component uses a `key` prop tied to currentTurnIndex.
+ * When the turn changes, the key changes, forcing React to 
+ * unmount and remount this component - giving us a fresh timer.
+ */
+const TurnTimer = ({ isMyTurn, onTimeout, currentTurnIndex }) => {
+    const [timeLeft, setTimeLeft] = useState(TURN_DURATION);
+    const timerRef = useRef(null);
+    const hasTimedOut = useRef(false);
+
+    useEffect(() => {
+        // Reset state on mount
+        setTimeLeft(TURN_DURATION);
+        hasTimedOut.current = false;
+
+        // Start countdown
+        timerRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    // Timeout! Only trigger if it's my turn
+                    if (isMyTurn && !hasTimedOut.current) {
+                        hasTimedOut.current = true;
+                        // Call timeout handler in next tick
+                        setTimeout(() => {
+                            if (onTimeout) onTimeout();
+                        }, 0);
+                    }
+                    return TURN_DURATION; // Reset for visual feedback
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        // CLEANUP: Guaranteed timer cleanup when component unmounts
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, []); // Empty deps - only run on mount (key change = new mount)
+
+    const timerPercentage = (timeLeft / TURN_DURATION) * 100;
+
+    return (
+        <div className="timer-ring-container">
+            <svg className="timer-ring" viewBox="0 0 36 36">
+                <circle
+                    className="timer-ring-bg"
+                    cx="18" cy="18" r="16"
+                    fill="none" strokeWidth="2"
+                />
+                <circle
+                    className={`timer-ring-progress ${isMyTurn ? 'my-turn' : ''}`}
+                    cx="18" cy="18" r="16"
+                    fill="none" strokeWidth="2.5"
+                    strokeDasharray="100.53"
+                    strokeDashoffset={100.53 - (timerPercentage / 100) * 100.53}
+                    strokeLinecap="round"
+                />
+            </svg>
+            <span className="timer-text">{timeLeft}</span>
+        </div>
+    );
+};
+
+/**
+ * LANDSCAPE UNO GAME COMPONENT
+ */
 const LandscapeUnoGame = () => {
     const { roomId } = useParams();
     const navigate = useNavigate();
@@ -20,6 +91,9 @@ const LandscapeUnoGame = () => {
         loading,
         error,
         isMyTurn,
+        currentTurnIndex,      // For timer key
+        currentPlayerName,     // Pre-computed display name
+        gameStatus,
         canCallUno,
         isSending,
         leaveRoom,
@@ -32,24 +106,9 @@ const LandscapeUnoGame = () => {
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [selectedCardIndex, setSelectedCardIndex] = useState(null);
     const [shakingCard, setShakingCard] = useState(null);
-    const [turnTimeLeft, setTurnTimeLeft] = useState(TURN_DURATION);
     const [hoveredCard, setHoveredCard] = useState(null);
 
-    // Use refs to avoid dependency issues in timer
-    const timerRef = useRef(null);
-    const autoDrawnRef = useRef(false);
-    const drawCardRef = useRef(drawCard);
-    const isMyTurnRef = useRef(isMyTurn);
     const handContainerRef = useRef(null);
-
-    // Keep refs updated
-    useEffect(() => {
-        drawCardRef.current = drawCard;
-    }, [drawCard]);
-
-    useEffect(() => {
-        isMyTurnRef.current = isMyTurn;
-    }, [isMyTurn]);
 
     // Memoize opponents
     const opponents = useMemo(() =>
@@ -57,74 +116,18 @@ const LandscapeUnoGame = () => {
         [players, user?.id]
     );
 
-    // Current game state values
-    const currentTurnIndex = room?.current_turn_index ?? 0;
-    const playerOrder = room?.player_order ?? [];
-    const currentPlayerId = playerOrder[currentTurnIndex];
-    const gameStatus = room?.status;
-
     // ========================================
-    // TURN TIMER - With safeguards against premature auto-draw
+    // TIMER TIMEOUT HANDLER
     // ========================================
-    useEffect(() => {
-        // Clear any existing timer
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
+    const handleTimerTimeout = useCallback(() => {
+        // Double-check it's still my turn before auto-drawing
+        if (isMyTurn) {
+            console.log('[UNO] Timer expired, auto-drawing card');
+            drawCard().catch(err => {
+                console.error('[UNO] Auto-draw failed:', err);
+            });
         }
-
-        // Only run timer during active game
-        if (gameStatus !== 'playing') {
-            setTurnTimeLeft(TURN_DURATION);
-            return;
-        }
-
-        // Reset timer when turn changes
-        setTurnTimeLeft(TURN_DURATION);
-        autoDrawnRef.current = false;
-
-        // Start countdown after a small delay to let state stabilize
-        const startTimer = setTimeout(() => {
-            timerRef.current = setInterval(() => {
-                setTurnTimeLeft(prev => {
-                    const newTime = prev - 1;
-
-                    // Check for timeout - only auto-draw at exactly 0
-                    if (newTime === 0) {
-                        // Double-check it's still my turn using current ref
-                        // and that we haven't already drawn
-                        if (isMyTurnRef.current && !autoDrawnRef.current) {
-                            autoDrawnRef.current = true;
-                            // Execute draw after a small delay to ensure stability
-                            setTimeout(() => {
-                                // Final check before drawing
-                                if (drawCardRef.current && isMyTurnRef.current) {
-                                    drawCardRef.current().catch(err => {
-                                        console.error('Auto-draw failed:', err);
-                                    });
-                                }
-                            }, 100);
-                        }
-                        return TURN_DURATION;
-                    }
-
-                    if (newTime < 0) {
-                        return TURN_DURATION;
-                    }
-
-                    return newTime;
-                });
-            }, 1000);
-        }, 500); // Wait 500ms before starting timer to let state settle
-
-        return () => {
-            clearTimeout(startTimer);
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-                timerRef.current = null;
-            }
-        };
-    }, [currentTurnIndex, gameStatus]);
+    }, [isMyTurn, drawCard]);
 
     // ========================================
     // CARD CLICK HANDLER
@@ -145,7 +148,6 @@ const LandscapeUnoGame = () => {
             return;
         }
 
-        // Wild cards need color selection
         if (card.type === 'wild') {
             setSelectedCardIndex(cardIndex);
             setShowColorPicker(true);
@@ -190,7 +192,7 @@ const LandscapeUnoGame = () => {
     };
 
     // ========================================
-    // UTILITY FUNCTIONS
+    // UTILITIES
     // ========================================
     const getCardDisplay = (value) => {
         if (value === 'skip') return '⊘';
@@ -201,23 +203,12 @@ const LandscapeUnoGame = () => {
         return value;
     };
 
+    // Check if specific player is active (using seat_index)
     const isPlayerActive = useCallback((player) => {
-        return String(currentPlayerId) === String(player?.user_id);
-    }, [currentPlayerId]);
+        return player?.seat_index === currentTurnIndex;
+    }, [currentTurnIndex]);
 
-    const getCurrentPlayerName = useCallback(() => {
-        if (String(currentPlayerId) === String(user?.id)) {
-            return 'Your Turn';
-        }
-        const player = players.find(p => String(p.user_id) === String(currentPlayerId));
-        return player?.username || 'Waiting...';
-    }, [currentPlayerId, user?.id, players]);
-
-    const timerPercentage = (turnTimeLeft / TURN_DURATION) * 100;
-
-    // ========================================
-    // CARD LAYOUT
-    // ========================================
+    // Card layout calculation
     const calculateCardLayout = () => {
         const cardCount = myHand.length;
         const baseCardWidth = 85;
@@ -312,13 +303,13 @@ const LandscapeUnoGame = () => {
             {/* Top Bar with Player Names */}
             <div className="landscape-top-bar">
                 <div className="landscape-players-bar">
-                    {/* Me */}
+                    {/* Me - use isMyTurn directly */}
                     <div className={`player-name-item ${isMyTurn ? 'active' : ''}`}>
                         {user?.username || 'You'}
                         <span className="player-card-count">{myHand.length}</span>
                     </div>
 
-                    {/* Opponents */}
+                    {/* Opponents - use seat_index comparison */}
                     {opponents.slice(0, 3).map((opponent) => (
                         <div
                             key={opponent.user_id}
@@ -376,23 +367,18 @@ const LandscapeUnoGame = () => {
                 <div className={`landscape-color-indicator ${room.current_color}`}></div>
             </div>
 
-            {/* Turn Indicator with Timer */}
+            {/* Turn Indicator with Timer 
+                KEY PROP: When currentTurnIndex changes, this forces a complete remount
+                of the TurnTimer component, guaranteeing a fresh timer state.
+            */}
             <div className={`landscape-turn-indicator ${isMyTurn ? 'my-turn' : ''}`}>
-                <div className="timer-ring-container">
-                    <svg className="timer-ring" viewBox="0 0 36 36">
-                        <circle className="timer-ring-bg" cx="18" cy="18" r="16" fill="none" strokeWidth="2" />
-                        <circle
-                            className={`timer-ring-progress ${isMyTurn ? 'my-turn' : ''}`}
-                            cx="18" cy="18" r="16"
-                            fill="none" strokeWidth="2.5"
-                            strokeDasharray="100.53"
-                            strokeDashoffset={100.53 - (timerPercentage / 100) * 100.53}
-                            strokeLinecap="round"
-                        />
-                    </svg>
-                    <span className="timer-text">{turnTimeLeft}</span>
-                </div>
-                <span className="turn-player-name">{getCurrentPlayerName()}</span>
+                <TurnTimer
+                    key={`timer-${currentTurnIndex}-${gameStatus}`}
+                    isMyTurn={isMyTurn}
+                    onTimeout={handleTimerTimeout}
+                    currentTurnIndex={currentTurnIndex}
+                />
+                <span className="turn-player-name">{currentPlayerName}</span>
             </div>
 
             {/* Player's Hand */}
