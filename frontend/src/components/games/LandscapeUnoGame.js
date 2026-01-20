@@ -182,15 +182,34 @@ const LandscapeUnoGame = () => {
     // Game over
     if (room.status === 'finished') {
         const isWinner = String(room.winner_id) === String(user?.id);
+
+        // Winner sees fullscreen video
+        if (isWinner) {
+            return (
+                <div className="landscape-uno-win-video-wrapper">
+                    <video
+                        className="win-video"
+                        src="/videos/win_video.mp4"
+                        autoPlay
+                        playsInline
+                        muted={false}
+                    />
+                    <div className="win-overlay">
+                        <div className="win-prize">🎉 YOU WON ${Number(room.pot_amount || 0).toLocaleString()}!</div>
+                        <button className="back-btn" onClick={() => navigate('/games/uno')}>
+                            Back to Lobby
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Loser sees normal game over screen
         return (
             <div className="landscape-uno-wrapper">
                 <div className="landscape-uno-gameover">
-                    <h1 className={`gameover-title ${isWinner ? 'winner' : 'loser'}`}>
-                        {isWinner ? '🎉 YOU WON!' : 'GAME OVER'}
-                    </h1>
-                    {!isWinner && (
-                        <div className="winner-name">👑 {room.winner_username} wins!</div>
-                    )}
+                    <h1 className="gameover-title loser">GAME OVER</h1>
+                    <div className="winner-name">👑 {room.winner_username} wins!</div>
                     <div className="prize-amount">${Number(room.pot_amount || 0).toLocaleString()}</div>
                     <button className="back-btn" onClick={() => navigate('/games/uno')}>
                         Back to Lobby
@@ -239,6 +258,7 @@ const LandscapeUnoGame = () => {
                     {/* Current Player (Me) - always first */}
                     <div className={`player-name-item ${isMyTurn ? 'active' : ''}`}>
                         {user?.username || 'You'}
+                        <span className="player-card-count">{myHand.length}</span>
                     </div>
 
                     {/* Opponents */}
@@ -248,6 +268,7 @@ const LandscapeUnoGame = () => {
                             className={`player-name-item ${isPlayerActive(opponent) ? 'active' : ''}`}
                         >
                             {opponent.username || `Player ${index + 2}`}
+                            <span className="player-card-count">{opponent.hand_count || 7}</span>
                         </div>
                     ))}
                 </div>

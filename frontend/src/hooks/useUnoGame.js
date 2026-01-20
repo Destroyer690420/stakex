@@ -178,6 +178,9 @@ const useUnoGame = (roomId) => {
 
                         case 'card_played':
                         case 'card_drawn':
+                            // Always fetch players to update opponent hand counts
+                            await fetchPlayers();
+
                             // Fetch hand only if it was MY action or I'm the victim of +2/+4
                             if (newState.last_event_user_id === user.id) {
                                 // My own action - hand already updated optimistically

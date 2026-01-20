@@ -1,141 +1,58 @@
 -- ========================================
--- UNO SPLIT STATE ARCHITECTURE
--- Separates heavy data (deck/hands) from public state (turn/top card)
--- to minimize Realtime bandwidth and fix sync issues
+-- UNO SPLIT STATE - ESSENTIAL SETUP
+-- Run this in Supabase SQL Editor
 -- ========================================
 
 -- ========================================
--- STEP 1: DROP OLD FUNCTIONS (Clean Slate)
--- ========================================
-DROP FUNCTION IF EXISTS fn_create_uno_room(UUID, NUMERIC, INTEGER) CASCADE;
-DROP FUNCTION IF EXISTS fn_join_uno_room(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_start_uno_game(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_leave_uno_room(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_uno_play_card(UUID, UUID, INTEGER, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS fn_uno_draw_card(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_uno_toggle_ready(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_uno_call_uno(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_get_uno_rooms() CASCADE;
-DROP FUNCTION IF EXISTS fn_delete_uno_room(UUID, UUID) CASCADE;
-DROP FUNCTION IF EXISTS fn_cleanup_stale_uno_rooms(INTEGER) CASCADE;
-DROP FUNCTION IF EXISTS fn_get_my_hand(UUID, UUID) CASCADE;
-
--- ========================================
--- STEP 2: REMOVE OLD TABLES FROM REALTIME
--- ========================================
-DO $$
-BEGIN
-    -- Try to remove uno_rooms from realtime (ignore if not present)
-    BEGIN
-        ALTER PUBLICATION supabase_realtime DROP TABLE uno_rooms;
-    EXCEPTION WHEN OTHERS THEN
-        NULL; -- Ignore if table not in publication
-    END;
-    
-    -- Try to remove uno_players from realtime (ignore if not present)
-    BEGIN
-        ALTER PUBLICATION supabase_realtime DROP TABLE uno_players;
-    EXCEPTION WHEN OTHERS THEN
-        NULL; -- Ignore if table not in publication
-    END;
-END $$;
-
--- ========================================
--- STEP 3: CREATE NEW SPLIT STATE TABLES
+-- STEP 1: CREATE SPLIT STATE TABLES
 -- ========================================
 
--- Public State Table (~500 bytes max) - REALTIME ENABLED
+-- Public State Table (REALTIME ENABLED)
 CREATE TABLE IF NOT EXISTS uno_public_states (
     room_id UUID PRIMARY KEY REFERENCES uno_rooms(id) ON DELETE CASCADE,
     current_turn_index INTEGER DEFAULT 0,
-    direction INTEGER DEFAULT 1 CHECK (direction IN (1, -1)),
-    top_card JSONB,
-    current_color TEXT CHECK (current_color IN ('red', 'blue', 'green', 'yellow', NULL)),
+    direction INTEGER DEFAULT 1,
+    top_card JSONB DEFAULT NULL,
+    current_color TEXT DEFAULT NULL,
+    turn_started_at TIMESTAMPTZ DEFAULT NULL,
+    status TEXT DEFAULT 'waiting',
     player_count INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
-    last_event TEXT,  -- 'card_played', 'card_drawn', 'player_joined', 'player_left', 'game_started'
-    last_event_user_id UUID,
-    winner_id UUID REFERENCES public.users(id),
-    winner_username TEXT,
-    turn_started_at TIMESTAMPTZ,
+    winner_id UUID DEFAULT NULL,
+    winner_username TEXT DEFAULT NULL,
+    last_event TEXT DEFAULT NULL,
+    last_event_user_id UUID DEFAULT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Hidden State Table (Heavy data ~10KB+) - NO REALTIME
+-- Hidden State Table (NOT Realtime - contains deck and hands)
 CREATE TABLE IF NOT EXISTS uno_hidden_states (
     room_id UUID PRIMARY KEY REFERENCES uno_rooms(id) ON DELETE CASCADE,
     deck JSONB DEFAULT '[]'::jsonb,
-    player_hands JSONB DEFAULT '{}'::jsonb  -- { "user_id": [cards], ... }
+    player_hands JSONB DEFAULT '{}'::jsonb
 );
 
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_uno_public_states_status ON uno_public_states(status);
-CREATE INDEX IF NOT EXISTS idx_uno_public_states_room ON uno_public_states(room_id);
-
--- ========================================
--- STEP 4: MODIFY uno_rooms TABLE
--- Remove game state columns (now in split tables)
--- ========================================
-
--- Drop columns that are now in split tables (if they exist)
+-- Add hand_count column to uno_players if not exists
 DO $$
 BEGIN
-    -- Remove deck if exists
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'deck') THEN
-        ALTER TABLE uno_rooms DROP COLUMN deck;
-    END IF;
-    
-    -- Remove top_card if exists
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'top_card') THEN
-        ALTER TABLE uno_rooms DROP COLUMN top_card;
-    END IF;
-    
-    -- Remove current_color if exists
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'current_color') THEN
-        ALTER TABLE uno_rooms DROP COLUMN current_color;
-    END IF;
-    
-    -- Remove current_turn_index if exists
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'current_turn_index') THEN
-        ALTER TABLE uno_rooms DROP COLUMN current_turn_index;
-    END IF;
-    
-    -- Remove direction if exists
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'direction') THEN
-        ALTER TABLE uno_rooms DROP COLUMN direction;
-    END IF;
-    
-    -- Remove turn_started_at if exists
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'turn_started_at') THEN
-        ALTER TABLE uno_rooms DROP COLUMN turn_started_at;
-    END IF;
-    
-    -- Remove winner_id if exists (now in public_states)
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'winner_id') THEN
-        ALTER TABLE uno_rooms DROP COLUMN winner_id;
-    END IF;
-    
-    -- Remove winner_username if exists (now in public_states)
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_rooms' AND column_name = 'winner_username') THEN
-        ALTER TABLE uno_rooms DROP COLUMN winner_username;
-    END IF;
-END $$;
-
--- Drop hand column from uno_players (now in hidden_states.player_hands)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_players' AND column_name = 'hand') THEN
-        ALTER TABLE uno_players DROP COLUMN hand;
-    END IF;
-    
-    -- Add hand_count column if not exists (tracks card count for opponent display)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'uno_players' AND column_name = 'hand_count') THEN
         ALTER TABLE uno_players ADD COLUMN hand_count INTEGER DEFAULT 0;
     END IF;
 END $$;
 
 -- ========================================
--- HELPER FUNCTIONS (Keep existing)
+-- STEP 2: ENABLE REALTIME ON PUBLIC STATES
+-- ========================================
+DO $$
+BEGIN
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE uno_public_states;
+    EXCEPTION WHEN duplicate_object THEN
+        NULL;
+    END;
+END $$;
+
+-- ========================================
+-- HELPER FUNCTIONS
 -- ========================================
 
 CREATE OR REPLACE FUNCTION generate_uno_deck()
@@ -219,7 +136,7 @@ END;
 $$;
 
 -- ========================================
--- NEW RPC: Get My Hand (Lightweight fetch)
+-- fn_get_my_hand - Get player's hand
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_get_my_hand(
     p_user_id UUID,
@@ -240,7 +157,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Create UNO Room (Updated for split state)
+-- fn_create_uno_room - Create a new room
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_create_uno_room(
     p_user_id UUID,
@@ -295,7 +212,7 @@ BEGIN
     VALUES (p_user_id, 'bet', p_bet_amount, v_new_cash, 'UNO Room Entry Fee (Host)',
             jsonb_build_object('game', 'uno', 'action', 'create_room'));
     
-    -- Create room (minimal data now)
+    -- Create room
     INSERT INTO uno_rooms (host_id, bet_amount, pot_amount, max_players, player_order)
     VALUES (p_user_id, p_bet_amount, p_bet_amount, v_max_p, ARRAY[p_user_id])
     RETURNING id INTO v_room_id;
@@ -325,7 +242,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Join UNO Room (Updated for split state)
+-- fn_join_uno_room - Join an existing room
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_join_uno_room(
     p_user_id UUID,
@@ -418,7 +335,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Leave UNO Room (Updated for split state)
+-- fn_leave_uno_room - Leave a room
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_leave_uno_room(
     p_user_id UUID,
@@ -591,7 +508,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Delete UNO Room (Host Only)
+-- fn_delete_uno_room - Delete room (Host only)
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_delete_uno_room(
     p_user_id UUID,
@@ -651,7 +568,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Start UNO Game (Updated for split state)
+-- fn_start_uno_game - Start the game
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_start_uno_game(
     p_user_id UUID,
@@ -774,7 +691,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Play Card (Updated for split state)
+-- fn_uno_play_card - Play a card
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_uno_play_card(
     p_user_id UUID,
@@ -812,39 +729,25 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'User ID required');
     END IF;
     
-    -- Lock room
-    SELECT * INTO v_room
-    FROM uno_rooms
-    WHERE id = p_room_id
-    FOR UPDATE;
+    SELECT * INTO v_room FROM uno_rooms WHERE id = p_room_id FOR UPDATE;
     
     IF NOT FOUND THEN
         RETURN jsonb_build_object('success', false, 'error', 'Room not found');
     END IF;
     
-    -- Get public state
-    SELECT * INTO v_public_state
-    FROM uno_public_states
-    WHERE room_id = p_room_id
-    FOR UPDATE;
+    SELECT * INTO v_public_state FROM uno_public_states WHERE room_id = p_room_id FOR UPDATE;
     
     IF v_public_state.status != 'playing' THEN
         RETURN jsonb_build_object('success', false, 'error', 'Game not in progress');
     END IF;
     
-    -- Check turn
     v_current_player_id := v_room.player_order[v_public_state.current_turn_index + 1];
     IF v_current_player_id != p_user_id THEN
         RETURN jsonb_build_object('success', false, 'error', 'Not your turn');
     END IF;
     
-    -- Get hidden state
-    SELECT * INTO v_hidden_state
-    FROM uno_hidden_states
-    WHERE room_id = p_room_id
-    FOR UPDATE;
+    SELECT * INTO v_hidden_state FROM uno_hidden_states WHERE room_id = p_room_id FOR UPDATE;
     
-    -- Get player's hand
     v_my_hand := v_hidden_state.player_hands->p_user_id::TEXT;
     v_card := v_my_hand->p_card_index;
     v_played_card := v_card;
@@ -853,7 +756,6 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Invalid card index');
     END IF;
     
-    -- Validate card can be played
     IF (v_card->>'type') != 'wild' THEN
         IF (v_card->>'color') != v_public_state.current_color AND (v_card->>'value') != (v_public_state.top_card->>'value') THEN
             RETURN jsonb_build_object('success', false, 'error', 'Card cannot be played');
@@ -873,12 +775,10 @@ BEGIN
     END LOOP;
     v_remaining_cards := jsonb_array_length(v_new_hand);
     
-    -- Update player hands in hidden state
     UPDATE uno_hidden_states
     SET player_hands = jsonb_set(player_hands, ARRAY[p_user_id::TEXT], v_new_hand)
     WHERE room_id = p_room_id;
     
-    -- Update hand_count for player who played
     UPDATE uno_players 
     SET hand_count = v_remaining_cards, has_called_uno = false 
     WHERE room_id = p_room_id AND user_id = p_user_id;
@@ -892,30 +792,24 @@ BEGIN
             IF v_player_count = 2 THEN
                 v_skip_next := true;
             END IF;
-            
         WHEN 'skip' THEN
             v_skip_next := true;
-            
         WHEN '+2' THEN
             v_skip_next := true;
             v_draw_cards := 2;
-            
         WHEN '+4' THEN
             v_skip_next := true;
             v_draw_cards := 4;
-            
         ELSE
             NULL;
     END CASE;
     
-    -- Calculate next turn
     v_next_turn := v_public_state.current_turn_index + v_public_state.direction;
     
     IF v_skip_next THEN
         v_next_turn := v_next_turn + v_public_state.direction;
     END IF;
     
-    -- Wrap around
     IF v_next_turn < 0 THEN
         v_next_turn := v_player_count + v_next_turn;
     END IF;
@@ -934,12 +828,10 @@ BEGIN
         v_victim_user_id := v_room.player_order[v_victim_index + 1];
         
         IF v_victim_user_id IS NOT NULL THEN
-            -- Refetch hidden state for current deck
             SELECT * INTO v_hidden_state FROM uno_hidden_states WHERE room_id = p_room_id;
             v_victim_hand := v_hidden_state.player_hands->v_victim_user_id::TEXT;
             
             FOR i IN 1..v_draw_cards LOOP
-                -- Check if deck needs reshuffle
                 IF v_hidden_state.deck IS NULL OR jsonb_array_length(v_hidden_state.deck) = 0 THEN
                     UPDATE uno_hidden_states
                     SET deck = shuffle_jsonb_array(generate_uno_deck())
@@ -960,14 +852,12 @@ BEGIN
                 END IF;
             END LOOP;
             
-            -- Update victim's hand_count after receiving cards
             UPDATE uno_players 
             SET hand_count = jsonb_array_length(v_victim_hand)
             WHERE room_id = p_room_id AND user_id = v_victim_user_id;
         END IF;
     END IF;
     
-    -- Update public state (Triggers Realtime!)
     UPDATE uno_public_states
     SET top_card = v_played_card,
         current_color = COALESCE(p_wild_color, v_played_card->>'color'),
@@ -979,7 +869,6 @@ BEGIN
         updated_at = NOW()
     WHERE room_id = p_room_id;
     
-    -- Check win condition
     IF v_remaining_cards = 0 THEN
         v_winner_id := p_user_id;
         SELECT username INTO v_winner_username FROM uno_players WHERE room_id = p_room_id AND user_id = p_user_id;
@@ -1026,7 +915,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Draw Card (Updated for split state)
+-- fn_uno_draw_card - Draw a card
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_uno_draw_card(
     p_user_id UUID,
@@ -1048,19 +937,13 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'User ID required');
     END IF;
     
-    SELECT * INTO v_room
-    FROM uno_rooms
-    WHERE id = p_room_id
-    FOR UPDATE;
+    SELECT * INTO v_room FROM uno_rooms WHERE id = p_room_id FOR UPDATE;
     
     IF NOT FOUND THEN
         RETURN jsonb_build_object('success', false, 'error', 'Room not found');
     END IF;
     
-    SELECT * INTO v_public_state
-    FROM uno_public_states
-    WHERE room_id = p_room_id
-    FOR UPDATE;
+    SELECT * INTO v_public_state FROM uno_public_states WHERE room_id = p_room_id FOR UPDATE;
     
     IF v_public_state.status != 'playing' THEN
         RETURN jsonb_build_object('success', false, 'error', 'Game not in progress');
@@ -1071,10 +954,7 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Not your turn');
     END IF;
     
-    SELECT * INTO v_hidden_state
-    FROM uno_hidden_states
-    WHERE room_id = p_room_id
-    FOR UPDATE;
+    SELECT * INTO v_hidden_state FROM uno_hidden_states WHERE room_id = p_room_id FOR UPDATE;
     
     -- If deck is empty, reshuffle
     IF jsonb_array_length(v_hidden_state.deck) = 0 THEN
@@ -1093,18 +973,15 @@ BEGIN
     v_my_hand := v_hidden_state.player_hands->p_user_id::TEXT;
     v_my_hand := v_my_hand || jsonb_build_array(v_card);
     
-    -- Update hidden state
     UPDATE uno_hidden_states
     SET deck = deck - 0,
         player_hands = jsonb_set(player_hands, ARRAY[p_user_id::TEXT], v_my_hand)
     WHERE room_id = p_room_id;
     
-    -- Update hand_count for player who drew
     UPDATE uno_players 
     SET hand_count = jsonb_array_length(v_my_hand), has_called_uno = false 
     WHERE room_id = p_room_id AND user_id = p_user_id;
     
-    -- Calculate next turn
     SELECT COUNT(*) INTO v_player_count FROM uno_players WHERE room_id = p_room_id;
     v_next_turn := v_public_state.current_turn_index + v_public_state.direction;
     
@@ -1113,7 +990,6 @@ BEGIN
     END IF;
     v_next_turn := v_next_turn % v_player_count;
     
-    -- Update public state (Triggers Realtime!)
     UPDATE uno_public_states
     SET current_turn_index = v_next_turn,
         turn_started_at = NOW(),
@@ -1135,7 +1011,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Toggle Ready
+-- fn_uno_toggle_ready - Toggle ready status
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_uno_toggle_ready(
     p_user_id UUID,
@@ -1159,7 +1035,6 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Not in this room');
     END IF;
     
-    -- Update public state to trigger sync
     UPDATE uno_public_states
     SET last_event = 'player_ready',
         last_event_user_id = p_user_id,
@@ -1175,7 +1050,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Call UNO
+-- fn_uno_call_uno - Call UNO
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_uno_call_uno(
     p_user_id UUID,
@@ -1209,7 +1084,6 @@ BEGIN
     SET has_called_uno = true
     WHERE room_id = p_room_id AND user_id = p_user_id;
     
-    -- Update public state to notify others
     UPDATE uno_public_states
     SET last_event = 'uno_called',
         last_event_user_id = p_user_id,
@@ -1225,7 +1099,7 @@ END;
 $$;
 
 -- ========================================
--- RPC: Get Available Rooms
+-- fn_get_uno_rooms - Get available rooms
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_get_uno_rooms()
 RETURNS JSONB
@@ -1260,104 +1134,18 @@ END;
 $$;
 
 -- ========================================
--- RPC: Cleanup Stale Rooms
--- ========================================
-CREATE OR REPLACE FUNCTION fn_cleanup_stale_uno_rooms(
-    p_inactivity_minutes INTEGER DEFAULT 10
-) RETURNS JSONB
-LANGUAGE plpgsql SECURITY DEFINER
-AS $$
-DECLARE
-    v_stale_room RECORD;
-    v_player RECORD;
-    v_cleaned_count INTEGER := 0;
-    v_cutoff_time TIMESTAMPTZ;
-BEGIN
-    v_cutoff_time := NOW() - (p_inactivity_minutes || ' minutes')::INTERVAL;
-    
-    FOR v_stale_room IN 
-        SELECT r.* FROM uno_rooms r
-        JOIN uno_public_states ps ON ps.room_id = r.id
-        WHERE ps.status = 'waiting' 
-        AND ps.updated_at < v_cutoff_time
-        FOR UPDATE OF r
-    LOOP
-        FOR v_player IN 
-            SELECT * FROM uno_players 
-            WHERE room_id = v_stale_room.id
-        LOOP
-            UPDATE public.users
-            SET cash = cash + v_stale_room.bet_amount, updated_at = NOW()
-            WHERE id = v_player.user_id;
-            
-            INSERT INTO public.transactions (user_id, type, amount, balance_after, description, metadata)
-            SELECT v_player.user_id, 'win', v_stale_room.bet_amount, cash, 'UNO Room Auto-Cleanup (Inactivity)',
-                   jsonb_build_object('game', 'uno', 'room_id', v_stale_room.id)
-            FROM public.users WHERE id = v_player.user_id;
-        END LOOP;
-        
-        DELETE FROM uno_players WHERE room_id = v_stale_room.id;
-        DELETE FROM uno_hidden_states WHERE room_id = v_stale_room.id;
-        DELETE FROM uno_public_states WHERE room_id = v_stale_room.id;
-        DELETE FROM uno_rooms WHERE id = v_stale_room.id;
-        
-        v_cleaned_count := v_cleaned_count + 1;
-    END LOOP;
-    
-    RETURN jsonb_build_object('success', true, 'cleaned_count', v_cleaned_count);
-
-EXCEPTION
-    WHEN OTHERS THEN
-        RETURN jsonb_build_object('success', false, 'error', SQLERRM, 'cleaned_count', v_cleaned_count);
-END;
-$$;
-
--- ========================================
--- ROW LEVEL SECURITY
--- ========================================
-ALTER TABLE uno_public_states ENABLE ROW LEVEL SECURITY;
-ALTER TABLE uno_hidden_states ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow all on uno_public_states" ON uno_public_states;
-DROP POLICY IF EXISTS "Allow all on uno_hidden_states" ON uno_hidden_states;
-
-CREATE POLICY "Allow all on uno_public_states" ON uno_public_states FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on uno_hidden_states" ON uno_hidden_states FOR ALL USING (true) WITH CHECK (true);
-
--- ========================================
 -- GRANT PERMISSIONS
 -- ========================================
+GRANT EXECUTE ON FUNCTION generate_uno_deck() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION shuffle_jsonb_array(JSONB) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION fn_get_my_hand(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_create_uno_room(UUID, NUMERIC, INTEGER) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_join_uno_room(UUID, UUID) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION fn_start_uno_game(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_leave_uno_room(UUID, UUID) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION fn_delete_uno_room(UUID, UUID) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION fn_start_uno_game(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_uno_play_card(UUID, UUID, INTEGER, TEXT) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_uno_draw_card(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_uno_toggle_ready(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_uno_call_uno(UUID, UUID) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION fn_get_uno_rooms() TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION fn_delete_uno_room(UUID, UUID) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION fn_cleanup_stale_uno_rooms(INTEGER) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION fn_get_my_hand(UUID, UUID) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION generate_uno_deck() TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION shuffle_jsonb_array(JSONB) TO authenticated, anon;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON uno_public_states TO authenticated, anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON uno_hidden_states TO authenticated, anon;
-
--- ========================================
--- ENABLE REALTIME (ONLY for public_states!)
--- ========================================
-DO $$
-BEGIN
-    BEGIN
-        ALTER PUBLICATION supabase_realtime ADD TABLE uno_public_states;
-    EXCEPTION WHEN duplicate_object OR map_member_exists THEN
-        NULL; -- Ignore if already exists
-    WHEN OTHERS THEN
-        NULL; -- Ignore other errors during publication update
-    END;
-END $$;
-
--- NOTE: uno_hidden_states is intentionally NOT added to realtime
--- This is the key optimization - heavy data (deck/hands) is never broadcast

@@ -5,6 +5,7 @@ import { AuthContext } from '../../context/AuthContext';
 import useUnoGame from '../../hooks/useUnoGame';
 import toast from 'react-hot-toast';
 import LandscapeUnoGame from './LandscapeUnoGame';
+import UnoWaitingRoom from './UnoWaitingRoom';
 import './Uno.css';
 
 const TURN_DURATION = 15; // 15 seconds per turn
@@ -250,84 +251,16 @@ const UnoGame = () => {
     // Waiting room
     if (room.status === 'waiting') {
         return (
-            <div className="uno-wrapper">
-                <div className="uno-container">
-                    <div className="uno-waiting-room">
-                        <h2 className="uno-waiting-title">🎴 Waiting Room</h2>
-
-                        {/* Pot Display */}
-                        <div className="uno-pot-display waiting">
-                            <div className="pot-label">Prize Pool</div>
-                            <div className="pot-amount">${Number(room.pot_amount || 0).toLocaleString()}</div>
-                            <div className="pot-hint">Entry: ${Number(room.bet_amount || 0).toLocaleString()}</div>
-                        </div>
-
-                        <div className="uno-players-list">
-                            {players.map((player) => (
-                                <div
-                                    key={player.id}
-                                    className={`uno-player-row ${player.user_id === room.host_id ? 'is-host' : ''}`}
-                                >
-                                    <div className="uno-player-info">
-                                        <div className="uno-player-avatar">
-                                            {player.username.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <span className="uno-player-name">{player.username}</span>
-                                            {player.user_id === room.host_id && (
-                                                <span className="uno-player-badge">👑 HOST</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className={`uno-ready-status ${player.is_ready || player.user_id === room.host_id ? 'ready' : 'not-ready'}`}>
-                                        {player.has_paid && <span className="paid-check">💰</span>}
-                                        {player.user_id === room.host_id ? '✓ Host' : (player.is_ready ? '✓ Ready' : '○ Not Ready')}
-                                    </div>
-                                </div>
-                            ))}
-
-                            {Array.from({ length: room.max_players - players.length }).map((_, i) => (
-                                <div key={`empty-${i}`} className="uno-player-row">
-                                    <div className="uno-player-info">
-                                        <div className="uno-player-avatar" style={{ background: 'rgba(255,255,255,0.1)' }}>?</div>
-                                        <span className="uno-player-name" style={{ color: '#555' }}>Waiting...</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="uno-waiting-actions">
-                            {/* Ready button for non-host players */}
-                            {!isHost && (
-                                <button
-                                    className={`uno-ready-btn ${myPlayer?.is_ready ? 'unready' : ''}`}
-                                    onClick={toggleReady}
-                                >
-                                    {myPlayer?.is_ready ? 'Cancel' : 'Ready'}
-                                </button>
-                            )}
-
-                            {isHost && (
-                                <button
-                                    className="uno-start-btn"
-                                    onClick={startGame}
-                                    disabled={!allPlayersReady || players.length < 2}
-                                >
-                                    {players.length < 2 ? 'Need 2+ Players' : !allPlayersReady ? 'Waiting...' : 'Start Game'}
-                                </button>
-                            )}
-
-                            <button className="uno-leave-btn" onClick={handleLeave}>Leave</button>
-
-                            {isHost && (
-                                <button className="uno-delete-btn" onClick={deleteRoom}>
-                                    🗑️ Delete Room
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <UnoWaitingRoom
+                room={room}
+                players={players}
+                onStart={startGame}
+                onLeave={handleLeave}
+                onDelete={deleteRoom}
+                onToggleReady={toggleReady}
+                isHost={isHost}
+                myPlayer={myPlayer}
+            />
         );
     }
 

@@ -511,7 +511,7 @@ BEGIN
         
         -- Record refund transaction
         INSERT INTO public.transactions (user_id, type, amount, balance_after, description, metadata)
-        SELECT v_player.user_id, 'refund', v_refund_amount, cash, 'UNO Room Deleted by Host',
+        SELECT v_player.user_id, 'win', v_refund_amount, cash, 'UNO Room Deleted by Host (Refund)',
                jsonb_build_object('game', 'uno', 'room_id', p_room_id)
         FROM public.users WHERE id = v_player.user_id;
     END LOOP;

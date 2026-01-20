@@ -1,0 +1,546 @@
+/* UnoWaitingRoom.css */
+
+/* --- Wrapper & Layout --- */
+.uno-waiting-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #1a2a3a 0%, #0f1722 70%, #05080c 100%);
+    padding: 20px;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #ffffff;
+}
+
+.uno-waiting-card {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    max-height: 90vh;
+    background: rgba(16, 24, 39, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Header --- */
+.uno-waiting-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.uno-waiting-header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #fff, #aab4be);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.waiting-pulse {
+    width: 12px;
+    height: 12px;
+    background: #4ade80;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+    }
+}
+
+/* --- Prize Section --- */
+.waiting-prize-section {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 140, 0, 0.1));
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.prize-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #ffd700;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.prize-value {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+    line-height: 1;
+}
+
+.entry-fee-tag {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- Players List --- */
+.waiting-players-container {
+    flex: 1;
+    min-height: 200px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* Scrollbar Styling */
+.waiting-players-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.waiting-players-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.waiting-players-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.players-list-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.waiting-player-row {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.waiting-player-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
+}
+
+.waiting-player-row.is-host {
+    border-color: rgba(255, 215, 0, 0.3);
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent);
+}
+
+.waiting-player-row.is-me {
+    border-color: rgba(74, 222, 128, 0.3);
+}
+
+/* Player Avatar */
+.player-avatar-circle {
+    width: 42px;
+    height: 42px;
+    background: #d4af37;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #1a1a1a;
+    margin-right: 16px;
+    position: relative;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.player-avatar-circle.empty {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.host-icon-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 0.8rem;
+    background: #000;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ffd700;
+}
+
+/* Player Info */
+.player-info-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.player-name-text {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.player-name-text.empty {
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.me-badge {
+    font-size: 0.75rem;
+    color: #4ade80;
+    font-weight: 700;
+}
+
+.player-status-text .status-host {
+    color: #ffd700;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.player-status-text .status-ready {
+    color: #4ade80;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.player-status-text .status-waiting {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+}
+
+/* Status Icon & Buttons */
+.player-status-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.paid-chip {
+    font-size: 1rem;
+}
+
+.ready-indicator {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.ready-indicator.success {
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80;
+}
+
+.ready-indicator.host {
+    background: rgba(255, 215, 0, 0.2);
+    color: #ffd700;
+}
+
+.ready-indicator.ready {
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.4);
+}
+
+.ready-indicator.not-ready {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.invite-btn-small {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.invite-btn-small:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* --- Controls Footer --- */
+.waiting-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.host-controls,
+.player-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.start-btn {
+    background: linear-gradient(135deg, #00e701 0%, #00a801 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0, 231, 1, 0.3);
+}
+
+.start-btn:disabled {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    color: rgba(255, 255, 255, 0.5);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.ready-toggle-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+}
+
+.ready-toggle-btn.is-ready {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-btn-text {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 8px;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.action-btn-text:hover {
+    color: #fff;
+}
+
+.action-btn-text.text-danger {
+    color: #ef4444;
+}
+
+.action-btn-text.text-danger:hover {
+    color: #f87171;
+}
+
+.host-secondary-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+}
+
+/* --- Delete Confirm Modal --- */
+.delete-confirm-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    border-radius: 24px;
+}
+
+.delete-confirm-modal {
+    background: #1f2937;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    padding: 24px;
+    border-radius: 16px;
+    text-align: center;
+    width: 85%;
+    max-width: 300px;
+}
+
+.delete-confirm-modal h3 {
+    color: #ef4444;
+    margin-bottom: 8px;
+}
+
+.delete-confirm-modal p {
+    color: #d1d5db;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: none;
+}
+
+.btn-confirm-delete {
+    background: #ef4444;
+    color: #fff;
+    border: none;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 480px) {
+    .uno-waiting-wrapper {
+        padding: 0;
+    }
+
+    .uno-waiting-card {
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        border: none;
+        padding-top: 40px;
+        /* Safe area for status bar if mostly mobile web app */
+    }
+
+    .prize-value {
+        font-size: 3rem;
+    }
+}
+
+/* --- Mobile Landscape Fix --- */
+@media (max-height: 500px) and (orientation: landscape) {
+    .uno-waiting-wrapper {
+        padding: 10px;
+        align-items: flex-start;
+        overflow-y: auto;
+    }
+
+    .uno-waiting-card {
+        flex-direction: row;
+        flex-wrap: wrap;
+        max-height: none;
+        height: auto;
+        padding: 15px;
+        gap: 15px;
+        overflow: visible;
+    }
+
+    /* Left Column: Header & Prize */
+    .uno-waiting-header,
+    .waiting-prize-section {
+        flex: 1 1 40%;
+        min-width: 250px;
+        order: 1;
+    }
+
+    .uno-waiting-header {
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 10px;
+    }
+
+    /* Right Column: Players */
+    .waiting-players-container {
+        flex: 1 1 50%;
+        min-width: 250px;
+        height: 180px;
+        min-height: 150px;
+        order: 2;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        padding-left: 15px;
+    }
+
+    /* Footer: Full Width at Bottom */
+    .waiting-controls {
+        flex: 1 1 100%;
+        width: 100%;
+        order: 3;
+        padding-top: 10px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .host-controls,
+    .player-controls {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .action-btn {
+        padding: 10px 20px;
+        width: auto;
+        font-size: 0.9rem;
+    }
+
+    .host-secondary-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .prize-value {
+        font-size: 2rem;
+    }
+}
