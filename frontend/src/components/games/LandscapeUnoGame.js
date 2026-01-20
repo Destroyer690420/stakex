@@ -136,16 +136,16 @@ const LandscapeUnoGame = () => {
 
     // Check if player is active (their turn)
     const isPlayerActive = (player) => {
-        return room?.player_order?.[room.current_turn_index] === player?.user_id;
+        return String(room?.player_order?.[room.current_turn_index]) === String(player?.user_id);
     };
 
     // Get current player's name
     const getCurrentPlayerName = () => {
         const currentPlayerId = room?.player_order?.[room.current_turn_index];
-        if (currentPlayerId === user?.id) {
+        if (String(currentPlayerId) === String(user?.id)) {
             return 'Your Turn';
         }
-        const player = players.find(p => p.user_id === currentPlayerId);
+        const player = players.find(p => String(p.user_id) === String(currentPlayerId));
         return player?.username || 'Player';
     };
 
