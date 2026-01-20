@@ -114,83 +114,9 @@ const useUnoGame = (roomId) => {
         };
     }, [roomId, user?.id, navigate, players]);
 
-    // Subscribe to real-time updates
-    useEffect(() => {
-        if (!roomId) return;
-
-        // Subscribe to room changes
-        const roomSubscription = supabase
-            .channel(`uno-room-${roomId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'uno_rooms',
-                filter: `id=eq.${roomId}`
-            }, (payload) => {
-                if (payload.new) {
-                    setRoom(payload.new);
-                }
-            })
-            .subscribe();
-
-        // Subscribe to player changes
-        const playerSubscription = supabase
-            .channel(`uno-players-${roomId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'uno_players',
-                filter: `room_id=eq.${roomId}`
-            }, async (payload) => {
-                // Refetch players to get updated data
-                const { data } = await supabase
-                    .from('uno_players')
-                    .select('*')
-                    .eq('room_id', roomId);
-
-                if (data) {
-                    setPlayers(data);
-                    // Update my hand if I'm in the game
-                    const myPlayerData = data.find(p => String(p.user_id) === String(user?.id));
-                    if (myPlayerData?.hand) {
-                        setMyHand(myPlayerData.hand);
-                    }
-                }
-            })
-            .subscribe();
-
-        // Polling fallback - refetch every 2 seconds for reliable sync
-        const pollInterval = setInterval(async () => {
-            const { data: roomData } = await supabase
-                .from('uno_rooms')
-                .select('*')
-                .eq('id', roomId)
-                .single();
-
-            if (roomData) {
-                setRoom(roomData);
-            }
-
-            const { data: playersData } = await supabase
-                .from('uno_players')
-                .select('*')
-                .eq('room_id', roomId);
-
-            if (playersData) {
-                setPlayers(playersData);
-                const myPlayerData = playersData.find(p => String(p.user_id) === String(user?.id));
-                if (myPlayerData?.hand) {
-                    setMyHand(myPlayerData.hand);
-                }
-            }
-        }, 2000);
-
-        return () => {
-            roomSubscription.unsubscribe();
-            playerSubscription.unsubscribe();
-            clearInterval(pollInterval);
-        };
-    }, [roomId, user?.id]);
+    // Real-time updates are now handled exclusively through Socket.IO
+    // The backend listens to Supabase changes and broadcasts via Socket.IO
+    // This eliminates Supabase egress from the frontend entirely
 
     // Fetch initial room data
     useEffect(() => {
