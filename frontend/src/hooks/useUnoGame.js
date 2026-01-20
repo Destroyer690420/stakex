@@ -66,10 +66,11 @@ const useUnoGame = (roomId) => {
     const players = room?.players ?? [];
 
     // Opponents
-    const opponents = useMemo(() =>
-        players.filter(p => p.user_id !== user?.id),
-        [players, user?.id]
-    );
+    // Opponents
+    const opponents = useMemo(() => {
+        const currentPlayers = room?.players ?? [];
+        return currentPlayers.filter(p => p.user_id !== user?.id);
+    }, [room?.players, user?.id]);
 
     // Top card on discard pile
     const topCard = useMemo(() => {
