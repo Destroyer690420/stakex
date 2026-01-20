@@ -112,7 +112,7 @@ const useUnoGame = (roomId) => {
             socket.emit('leaveRoom', { roomId });
             socket.disconnect();
         };
-    }, [roomId, user?.id, navigate, players]);
+    }, [roomId, user?.id]);
 
     // Real-time updates are now handled exclusively through Socket.IO
     // The backend listens to Supabase changes and broadcasts via Socket.IO
