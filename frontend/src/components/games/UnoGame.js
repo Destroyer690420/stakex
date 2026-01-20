@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../../context/AuthContext';
 import useUnoGame from '../../hooks/useUnoGame';
 import toast from 'react-hot-toast';
+import LandscapeUnoGame from './LandscapeUnoGame';
 import './Uno.css';
 
 const TURN_DURATION = 15; // 15 seconds per turn
@@ -42,12 +43,19 @@ const UnoGame = () => {
 
     const timerRef = useRef(null);
     const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+    const [screenHeight, setScreenHeight] = useState(window.innerHeight);
 
     useEffect(() => {
-        const handleResize = () => setScreenWidth(window.innerWidth);
+        const handleResize = () => {
+            setScreenWidth(window.innerWidth);
+            setScreenHeight(window.innerHeight);
+        };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Detect landscape mode
+    const isLandscape = screenWidth > screenHeight;
 
     // Get my player info - use string comparison for UUIDs
     const myPlayer = players.find(p => String(p.user_id) === String(user?.id));
@@ -382,7 +390,12 @@ const UnoGame = () => {
         );
     }
 
-    // Active game - 4 player layout
+    // Landscape mode - render optimized landscape UI
+    if (isLandscape) {
+        return <LandscapeUnoGame />;
+    }
+
+    // Active game - 4 player layout (portrait)
     return (
         <div className="uno-wrapper">
             <div className="uno-container">
