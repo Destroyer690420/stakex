@@ -5,103 +5,87 @@ import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 /**
- * UNO Game Hook - Refactored with Strict Turn Logic
+ * UNO GAME HOOK - COMPLETE REBUILD
  * 
- * Key changes:
- * 1. isMyTurn computed using seat_index comparison (not player_order array lookup)
- * 2. currentTurnIndex exposed for timer key prop (forces timer remount)
- * 3. All turn-related state derived from single source: publicState.current_turn_index
+ * Architecture:
+ * - Single subscription to uno_rooms table
+ * - All state in one place (players, hands, deck, discard)
+ * - Timer syncs to current_turn_index changes
  */
 const useUnoGame = (roomId) => {
     const navigate = useNavigate();
     const { user, refreshUser } = useContext(AuthContext);
 
     // ========================================
-    // STATE
+    // STATE - Single source of truth
     // ========================================
     const [room, setRoom] = useState(null);
-    const [publicState, setPublicState] = useState(null);
-    const [players, setPlayers] = useState([]);
-    const [myHand, setMyHand] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSending, setIsSending] = useState(false);
 
-    const lastProcessedEvent = useRef(null);
+    // Timer state
+    const [turnTimeLeft, setTurnTimeLeft] = useState(15);
+    const timerRef = useRef(null);
+    const autoDrawnRef = useRef(false);
 
     // ========================================
-    // DERIVED VALUES - Single Source of Truth
+    // DERIVED VALUES
     // ========================================
 
-    // My player record from the players array
-    const myPlayer = useMemo(() =>
-        players.find(p => String(p.user_id) === String(user?.id)),
+    // Find my player in the players array
+    const myPlayer = useMemo(() => {
+        if (!room?.players || !user?.id) return null;
+        return room.players.find(p => p.user_id === user.id);
+    }, [room?.players, user?.id]);
+
+    // My seat index
+    const mySeatIndex = myPlayer?.seat_index ?? -1;
+
+    // Current turn index
+    const currentTurnIndex = room?.current_turn_index ?? -1;
+
+    // Is it my turn?
+    const isMyTurn = useMemo(() => {
+        if (room?.status !== 'playing') return false;
+        if (mySeatIndex < 0 || currentTurnIndex < 0) return false;
+        return mySeatIndex === currentTurnIndex;
+    }, [room?.status, mySeatIndex, currentTurnIndex]);
+
+    // My hand (from players array)
+    const myHand = myPlayer?.hand ?? [];
+
+    // Current player's name
+    const currentPlayerName = useMemo(() => {
+        if (isMyTurn) return 'Your Turn';
+        const player = room?.players?.[currentTurnIndex];
+        return player?.username ?? 'Waiting...';
+    }, [isMyTurn, room?.players, currentTurnIndex]);
+
+    // All players (for display)
+    const players = room?.players ?? [];
+
+    // Opponents
+    const opponents = useMemo(() =>
+        players.filter(p => p.user_id !== user?.id),
         [players, user?.id]
     );
 
-    // My seat index (0-indexed position in the turn order)
-    const mySeatIndex = myPlayer?.seat_index ?? -1;
+    // Top card on discard pile
+    const topCard = useMemo(() => {
+        if (!room?.discard_pile?.length) return null;
+        return room.discard_pile[room.discard_pile.length - 1];
+    }, [room?.discard_pile]);
 
-    // Current turn index from Realtime (the authoritative source)
-    const currentTurnIndex = publicState?.current_turn_index ?? -1;
-
-    // Game status from Realtime
-    const gameStatus = publicState?.status ?? 'waiting';
-
-    /**
-     * STRICT isMyTurn CHECK
-     * Conditions:
-     * 1. Game must be in 'playing' status
-     * 2. My seat_index must match current_turn_index
-     * 3. Both values must be valid (>= 0)
-     */
-    const isMyTurn = useMemo(() => {
-        // Guard: Game must be playing
-        if (gameStatus !== 'playing') return false;
-
-        // Guard: Must have valid seat index
-        if (mySeatIndex < 0 || currentTurnIndex < 0) return false;
-
-        // Strict comparison
-        return mySeatIndex === currentTurnIndex;
-    }, [gameStatus, mySeatIndex, currentTurnIndex]);
-
-    // Merged room object for backward compatibility
-    const mergedRoom = useMemo(() => {
-        if (!room || !publicState) return null;
-        return {
-            ...room,
-            status: publicState.status,
-            current_turn_index: publicState.current_turn_index,
-            direction: publicState.direction,
-            top_card: publicState.top_card,
-            current_color: publicState.current_color,
-            turn_started_at: publicState.turn_started_at,
-            winner_id: publicState.winner_id,
-            winner_username: publicState.winner_username,
-        };
-    }, [room, publicState]);
-
-    // Current player's user_id (for display purposes)
-    const currentPlayer = useMemo(() => {
-        if (!room?.player_order || currentTurnIndex < 0) return null;
-        return room.player_order[currentTurnIndex];
-    }, [room?.player_order, currentTurnIndex]);
-
-    // Current player's name (for display)
-    const currentPlayerName = useMemo(() => {
-        if (isMyTurn) return 'Your Turn';
-        const player = players.find(p => String(p.user_id) === String(currentPlayer));
-        return player?.username || 'Waiting...';
-    }, [isMyTurn, currentPlayer, players]);
-
+    // Can call UNO
     const canCallUno = myHand.length <= 2 && myHand.length > 0;
 
     // ========================================
-    // DATA FETCHING
+    // FETCH ROOM
     // ========================================
     const fetchRoom = useCallback(async () => {
         if (!roomId) return;
+
         try {
             const { data, error: fetchError } = await supabase
                 .from('uno_rooms')
@@ -111,181 +95,126 @@ const useUnoGame = (roomId) => {
 
             if (fetchError) throw fetchError;
             setRoom(data);
+            setError(null);
         } catch (err) {
-            console.error('[UNO] Failed to fetch room:', err);
+            console.error('[UNO] Fetch error:', err);
             setError(err.message);
         }
     }, [roomId]);
 
-    const fetchPublicState = useCallback(async () => {
-        if (!roomId) return;
-        try {
-            const { data, error: fetchError } = await supabase
-                .from('uno_public_states')
-                .select('*')
-                .eq('room_id', roomId)
-                .single();
-
-            if (fetchError) throw fetchError;
-            setPublicState(data);
-        } catch (err) {
-            console.error('[UNO] Failed to fetch public state:', err);
-        }
-    }, [roomId]);
-
-    const fetchPlayers = useCallback(async () => {
-        if (!roomId) return;
-        try {
-            const { data, error: fetchError } = await supabase
-                .from('uno_players')
-                .select('*')
-                .eq('room_id', roomId)
-                .order('seat_index', { ascending: true });
-
-            if (fetchError) throw fetchError;
-            setPlayers(data || []);
-        } catch (err) {
-            console.error('[UNO] Failed to fetch players:', err);
-        }
-    }, [roomId]);
-
-    const fetchMyHand = useCallback(async () => {
-        if (!roomId || !user?.id) return;
-        try {
-            const { data, error: fetchError } = await supabase.rpc('fn_get_my_hand', {
-                p_user_id: user.id,
-                p_room_id: roomId
-            });
-
-            if (fetchError) throw fetchError;
-            setMyHand(data || []);
-        } catch (err) {
-            console.error('[UNO] Failed to fetch hand:', err);
-        }
-    }, [roomId, user?.id]);
-
     // ========================================
-    // INITIAL DATA LOAD
+    // INITIAL LOAD
     // ========================================
     useEffect(() => {
         if (!roomId) return;
 
-        const loadInitialData = async () => {
+        const loadRoom = async () => {
             setLoading(true);
-            setError(null);
-
-            await Promise.all([
-                fetchRoom(),
-                fetchPublicState(),
-                fetchPlayers(),
-            ]);
-
-            await fetchMyHand();
+            await fetchRoom();
             setLoading(false);
         };
 
-        loadInitialData();
-    }, [roomId, fetchRoom, fetchPublicState, fetchPlayers, fetchMyHand]);
+        loadRoom();
+    }, [roomId, fetchRoom]);
 
     // ========================================
-    // REALTIME SUBSCRIPTION
+    // REALTIME SUBSCRIPTION - Single subscription to uno_rooms
     // ========================================
     useEffect(() => {
-        if (!roomId || !user?.id) return;
+        if (!roomId) return;
 
-        console.log('[UNO] Setting up Realtime subscription for room:', roomId);
+        console.log('[UNO] Setting up Realtime subscription');
 
         const channel = supabase
-            .channel(`uno-game-${roomId}`)
+            .channel(`uno-room-${roomId}`)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
-                table: 'uno_public_states',
-                filter: `room_id=eq.${roomId}`
-            }, async (payload) => {
-                console.log('[UNO] Realtime event:', payload.eventType, payload.new?.last_event);
+                table: 'uno_rooms',
+                filter: `id=eq.${roomId}`
+            }, (payload) => {
+                console.log('[UNO] Realtime update:', payload.eventType);
 
                 if (payload.eventType === 'DELETE') {
-                    toast.error('Room was closed');
+                    toast.error('Room was deleted');
                     navigate('/games/uno');
                     return;
                 }
 
-                const newState = payload.new;
+                // Update room state with new data
+                const newRoom = payload.new;
+                setRoom(newRoom);
 
-                // CRITICAL: Update publicState immediately
-                // This is the single source of truth for turn
-                setPublicState(newState);
-
-                // Dedupe events
-                const eventKey = `${newState.last_event}-${newState.updated_at}`;
-                if (eventKey === lastProcessedEvent.current) return;
-                lastProcessedEvent.current = eventKey;
-
-                // Handle specific events
-                switch (newState.last_event) {
-                    case 'game_started':
-                        console.log('[UNO] Game started, fetching hand and players');
-                        await fetchMyHand();
-                        await fetchPlayers();
-                        toast.success('Game started!');
-                        break;
-
-                    case 'card_played':
-                    case 'card_drawn':
-                        console.log('[UNO] Card action, refreshing data. New turn index:', newState.current_turn_index);
-                        await fetchPlayers();
-                        await fetchMyHand();
-                        break;
-
-                    case 'player_joined':
-                        await fetchPlayers();
-                        await fetchRoom();
-                        toast.success('A player joined!');
-                        break;
-
-                    case 'player_left':
-                        await fetchPlayers();
-                        await fetchRoom();
-                        toast('A player left');
-                        break;
-
-                    case 'player_ready':
-                        await fetchPlayers();
-                        break;
-
-                    case 'uno_called':
-                        if (String(newState.last_event_user_id) !== String(user.id)) {
-                            const caller = players.find(p => String(p.user_id) === String(newState.last_event_user_id));
-                            toast(`${caller?.username || 'Player'} called UNO!`, { icon: '🎴' });
-                        }
-                        break;
-
-                    case 'game_over':
-                        await fetchPlayers();
+                // Handle game over
+                if (newRoom.status === 'finished' && newRoom.winner_id) {
+                    if (newRoom.winner_id === user?.id) {
+                        toast.success('🎉 You won!');
                         refreshUser();
-                        if (String(newState.winner_id) === String(user.id)) {
-                            toast.success('🎉 You won!', { duration: 5000 });
-                        } else {
-                            toast(`${newState.winner_username} won the game!`);
-                        }
-                        break;
-
-                    default:
-                        break;
+                    } else {
+                        toast(`${newRoom.winner_username} won the game!`);
+                    }
                 }
             })
             .subscribe();
 
         return () => {
-            console.log('[UNO] Cleaning up Realtime subscription');
+            console.log('[UNO] Cleaning up subscription');
             channel.unsubscribe();
         };
-    }, [roomId, user?.id, navigate, fetchRoom, fetchPlayers, fetchMyHand, refreshUser, players]);
+    }, [roomId, navigate, user?.id, refreshUser]);
 
     // ========================================
-    // GAME ACTIONS with Safety Guards
+    // TIMER - Syncs to current_turn_index changes
     // ========================================
+    useEffect(() => {
+        // Clear any existing timer
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+
+        // Only run during active game
+        if (room?.status !== 'playing') {
+            setTurnTimeLeft(15);
+            return;
+        }
+
+        // Reset timer when turn changes
+        console.log('[UNO] Turn changed to:', currentTurnIndex, 'isMyTurn:', isMyTurn);
+        setTurnTimeLeft(15);
+        autoDrawnRef.current = false;
+
+        // Start countdown
+        timerRef.current = setInterval(() => {
+            setTurnTimeLeft(prev => {
+                if (prev <= 1) {
+                    // Time's up - auto draw if it's my turn
+                    if (isMyTurn && !autoDrawnRef.current) {
+                        autoDrawnRef.current = true;
+                        console.log('[UNO] Timer expired, auto-drawing');
+                        // Execute in next tick
+                        setTimeout(() => {
+                            drawCardInternal().catch(console.error);
+                        }, 0);
+                    }
+                    return 15;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [currentTurnIndex, room?.status, isMyTurn]);
+
+    // ========================================
+    // GAME ACTIONS
+    // ========================================
+
     const createRoom = useCallback(async (betAmount, maxPlayers = 4) => {
         if (!user?.id) {
             toast.error('Please log in');
@@ -388,19 +317,18 @@ const useUnoGame = (roomId) => {
             if (rpcError) throw rpcError;
             if (!data.success) throw new Error(data.error);
 
-            await fetchPlayers();
             return { success: true, isReady: data.isReady };
         } catch (err) {
             toast.error(err.message);
             return { success: false, error: err.message };
         }
-    }, [roomId, user?.id, fetchPlayers]);
+    }, [roomId, user?.id]);
 
     const startGame = useCallback(async () => {
         if (!roomId || !user?.id) return { success: false };
 
         try {
-            const { data, error: rpcError } = await supabase.rpc('fn_start_uno_game', {
+            const { data, error: rpcError } = await supabase.rpc('fn_start_uno', {
                 p_user_id: user.id,
                 p_room_id: roomId
             });
@@ -408,6 +336,7 @@ const useUnoGame = (roomId) => {
             if (rpcError) throw rpcError;
             if (!data.success) throw new Error(data.error);
 
+            toast.success('Game started!');
             return { success: true };
         } catch (err) {
             toast.error(err.message);
@@ -415,24 +344,20 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id]);
 
-    /**
-     * PLAY CARD - With Safety Guard
-     */
     const playCard = useCallback(async (cardIndex, wildColor = null) => {
-        // SAFETY CHECK: Verify it's actually our turn
+        // Safety check
         if (!isMyTurn) {
-            console.warn('[UNO] playCard called but isMyTurn is false. Aborting.');
+            console.warn('[UNO] playCard called but not my turn');
             toast.error("Not your turn!");
-            return { success: false, error: 'Not your turn' };
+            return { success: false };
         }
 
-        if (!roomId || !user?.id) return { success: false };
-        if (isSending) return { success: false, error: 'Already sending' };
+        if (!roomId || !user?.id || isSending) return { success: false };
 
         setIsSending(true);
 
         try {
-            const { data, error: rpcError } = await supabase.rpc('fn_uno_play_card', {
+            const { data, error: rpcError } = await supabase.rpc('fn_play_card', {
                 p_user_id: user.id,
                 p_room_id: roomId,
                 p_card_index: cardIndex,
@@ -442,9 +367,6 @@ const useUnoGame = (roomId) => {
             if (rpcError) throw rpcError;
             if (!data.success) throw new Error(data.error);
 
-            // Optimistic update
-            setMyHand(prev => prev.filter((_, i) => i !== cardIndex));
-
             if (data.gameOver) {
                 refreshUser();
             }
@@ -452,108 +374,90 @@ const useUnoGame = (roomId) => {
             return { success: true, data };
         } catch (err) {
             toast.error(err.message);
-            await fetchMyHand();
             return { success: false, error: err.message };
         } finally {
             setIsSending(false);
         }
-    }, [roomId, user?.id, isSending, isMyTurn, refreshUser, fetchMyHand]);
+    }, [roomId, user?.id, isMyTurn, isSending, refreshUser]);
 
-    /**
-     * DRAW CARD - With Safety Guard
-     */
-    const drawCard = useCallback(async () => {
-        // SAFETY CHECK: Verify it's actually our turn
-        if (!isMyTurn) {
-            console.warn('[UNO] drawCard called but isMyTurn is false. Aborting.');
-            return { success: false, error: 'Not your turn' };
-        }
-
+    // Internal draw card (for auto-draw, doesn't check isMyTurn again)
+    const drawCardInternal = useCallback(async () => {
         if (!roomId || !user?.id) return { success: false };
-        if (isSending) return { success: false, error: 'Already sending' };
-
-        setIsSending(true);
 
         try {
-            const { data, error: rpcError } = await supabase.rpc('fn_uno_draw_card', {
+            const { data, error: rpcError } = await supabase.rpc('fn_draw_card', {
                 p_user_id: user.id,
                 p_room_id: roomId
             });
 
             if (rpcError) throw rpcError;
             if (!data.success) throw new Error(data.error);
-
-            if (data.drawnCard) {
-                setMyHand(prev => [...prev, data.drawnCard]);
-            }
 
             return { success: true, data };
         } catch (err) {
-            toast.error(err.message);
-            await fetchMyHand();
-            return { success: false, error: err.message };
-        } finally {
-            setIsSending(false);
-        }
-    }, [roomId, user?.id, isSending, isMyTurn, fetchMyHand]);
-
-    const shoutUno = useCallback(async () => {
-        if (!roomId || !user?.id) return { success: false };
-
-        try {
-            const { data, error: rpcError } = await supabase.rpc('fn_uno_call_uno', {
-                p_user_id: user.id,
-                p_room_id: roomId
-            });
-
-            if (rpcError) throw rpcError;
-            if (!data.success) throw new Error(data.error);
-
-            toast.success('UNO!', { icon: '🎴' });
-            return { success: true };
-        } catch (err) {
-            toast.error(err.message);
+            console.error('[UNO] Draw failed:', err);
             return { success: false, error: err.message };
         }
     }, [roomId, user?.id]);
 
-    const challengeUno = useCallback(async (targetUserId) => {
-        toast('Challenge feature coming soon!');
-        return { success: false };
+    const drawCard = useCallback(async () => {
+        // Safety check
+        if (!isMyTurn) {
+            toast.error("Not your turn!");
+            return { success: false };
+        }
+
+        if (isSending) return { success: false };
+        setIsSending(true);
+
+        const result = await drawCardInternal();
+
+        setIsSending(false);
+        return result;
+    }, [isMyTurn, isSending, drawCardInternal]);
+
+    const shoutUno = useCallback(async () => {
+        toast.success('UNO!', { icon: '🎴' });
+        return { success: true };
     }, []);
 
     // ========================================
-    // UTILITY FUNCTIONS
+    // UTILITY
     // ========================================
     const isCardPlayable = useCallback((card) => {
-        if (!publicState || !card) return false;
+        if (!topCard || !card) return false;
         if (card.type === 'wild') return true;
-        if (card.color === publicState.current_color) return true;
-        if (card.value === publicState.top_card?.value) return true;
+        if (card.color === room?.current_color) return true;
+        if (card.value === topCard.value) return true;
         return false;
-    }, [publicState]);
+    }, [topCard, room?.current_color]);
 
     // ========================================
-    // RETURN - Expose currentTurnIndex for timer key
+    // RETURN
     // ========================================
     return {
-        room: mergedRoom,
-        publicState,
-        players,
-        myHand,
+        room,
         loading,
         error,
 
-        // Turn state - CRITICAL for UI
-        isMyTurn,
-        currentTurnIndex,        // Expose for timer key prop
-        currentPlayer,
-        currentPlayerName,       // Pre-computed for display
-        mySeatIndex,             // Expose for debugging
-        gameStatus,
-
-        canCallUno,
+        // Players
+        players,
+        opponents,
         myPlayer,
+        myHand,
+
+        // Turn state
+        isMyTurn,
+        currentTurnIndex,
+        currentPlayerName,
+        mySeatIndex,
+        turnTimeLeft,
+
+        // Game state
+        topCard,
+        currentColor: room?.current_color,
+        gameStatus: room?.status ?? 'waiting',
+        canCallUno,
         isSending,
 
         // Actions
@@ -566,7 +470,6 @@ const useUnoGame = (roomId) => {
         playCard,
         drawCard,
         shoutUno,
-        challengeUno,
         isCardPlayable,
     };
 };
