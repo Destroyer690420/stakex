@@ -1,4 +1,4 @@
-import React, { useState, useContext, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useContext, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../../context/AuthContext';
@@ -15,7 +15,6 @@ const LandscapeUnoGame = () => {
 
     const {
         room,
-        players,
         opponents,
         myHand,
         loading,
