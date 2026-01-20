@@ -3,131 +3,105 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import io from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
+/**
+ * UNO Game Hook - Split State Architecture
+ * 
+ * Key optimizations:
+ * 1. Subscribes ONLY to uno_public_states (~100 bytes per update)
+ * 2. NO polling - pure Realtime subscription
+ * 3. Fetches hand via fn_get_my_hand RPC only when needed
+ * 4. Optimistic UI for card plays
+ */
 const useUnoGame = (roomId) => {
     const navigate = useNavigate();
     const { user, refreshUser } = useContext(AuthContext);
 
+    // Public state (from Realtime subscription)
+    const [publicState, setPublicState] = useState(null);
     const [room, setRoom] = useState(null);
     const [players, setPlayers] = useState([]);
+
+    // Private state (fetched on demand)
     const [myHand, setMyHand] = useState([]);
+
+    // UI state
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isSending, setIsSending] = useState(false);
 
-    const socketRef = useRef(null);
+    // Track last fetched event to avoid redundant hand fetches
+    const lastFetchedEventRef = useRef(null);
 
-    // Computed values - use String() for UUID comparisons
-    const isMyTurn = String(room?.player_order?.[room?.current_turn_index]) === String(user?.id);
-    const currentPlayer = room?.player_order?.[room?.current_turn_index];
+    // Computed values
+    const isMyTurn = String(room?.player_order?.[publicState?.current_turn_index]) === String(user?.id);
+    const currentPlayer = room?.player_order?.[publicState?.current_turn_index];
     const canCallUno = myHand.length <= 2 && myHand.length > 0;
     const myPlayer = players.find(p => String(p.user_id) === String(user?.id));
 
-    // Initialize socket connection
-    useEffect(() => {
+    // Merge public state into a room-like object for backwards compatibility
+    const mergedRoom = room && publicState ? {
+        ...room,
+        status: publicState.status,
+        current_turn_index: publicState.current_turn_index,
+        direction: publicState.direction,
+        top_card: publicState.top_card,
+        current_color: publicState.current_color,
+        turn_started_at: publicState.turn_started_at,
+        winner_id: publicState.winner_id,
+        winner_username: publicState.winner_username,
+    } : null;
+
+    // ========================================
+    // FETCH MY HAND (Lightweight RPC)
+    // ========================================
+    const fetchMyHand = useCallback(async () => {
         if (!roomId || !user?.id) return;
 
-        socketRef.current = io(`${SOCKET_URL}/uno`, {
-            transports: ['websocket', 'polling']
-        });
+        try {
+            const { data, error } = await supabase.rpc('fn_get_my_hand', {
+                p_user_id: user.id,
+                p_room_id: roomId
+            });
 
-        const socket = socketRef.current;
-
-        socket.on('connect', () => {
-            console.log('Connected to UNO socket');
-            socket.emit('joinRoom', { roomId, userId: user.id });
-        });
-
-        socket.on('roomState', (data) => {
-            setRoom(data.room);
-            setPlayers(data.players || []);
-            setMyHand(data.myHand || []);
-            setLoading(false);
-        });
-
-        socket.on('roomUpdated', (roomData) => {
-            if (roomData.deleted) {
-                toast.error('Room was closed');
-                navigate('/games/uno');
-                return;
-            }
-            setRoom(roomData);
-        });
-
-        socket.on('playerUpdated', (playerData) => {
-            if (playerData.deleted) {
-                setPlayers(prev => prev.filter(p => p.user_id !== playerData.user_id));
-            } else {
-                setPlayers(prev => {
-                    const existing = prev.find(p => p.user_id === playerData.user_id);
-                    if (existing) {
-                        return prev.map(p => p.user_id === playerData.user_id ? { ...p, ...playerData } : p);
-                    }
-                    return [...prev, playerData];
-                });
-            }
-        });
-
-        socket.on('playerJoined', ({ userId }) => {
-            toast.success('A player joined the room!');
-        });
-
-        socket.on('playerLeft', ({ userId }) => {
-            toast('A player left the room');
-        });
-
-        socket.on('playerForfeited', ({ userId }) => {
-            toast.error('A player forfeited!');
-        });
-
-        socket.on('cardPlayed', ({ card, playerId, newColor }) => {
-            // Update will come through roomUpdated
-        });
-
-        socket.on('cardDrawn', ({ playerId }) => {
-            // Update will come through roomUpdated
-        });
-
-        socket.on('unoCall', ({ userId, username }) => {
-            toast(`${username} called UNO!`, { icon: '🎴' });
-        });
-
-        socket.on('gameStarted', () => {
-            toast.success('Game started!');
-        });
-
-        socket.on('autoDrawn', ({ userId }) => {
-            const player = players.find(p => p.user_id === userId);
-            toast(`${player?.username || 'Player'} ran out of time and drew a card`);
-        });
-
-        socket.on('error', ({ message }) => {
-            toast.error(message);
-        });
-
-        return () => {
-            // Emit leaveRoom before disconnecting so player is properly removed
-            socket.emit('leaveRoom', { roomId });
-            socket.disconnect();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+            if (error) throw error;
+            setMyHand(data || []);
+        } catch (err) {
+            console.error('Failed to fetch hand:', err);
+        }
     }, [roomId, user?.id]);
 
-    // Real-time updates are now handled exclusively through Socket.IO
-    // The backend listens to Supabase changes and broadcasts via Socket.IO
-    // This eliminates Supabase egress from the frontend entirely
+    // ========================================
+    // FETCH PLAYERS (Non-realtime, on demand)
+    // ========================================
+    const fetchPlayers = useCallback(async () => {
+        if (!roomId) return;
 
-    // Fetch initial room data
+        try {
+            const { data, error } = await supabase
+                .from('uno_players')
+                .select('*')
+                .eq('room_id', roomId);
+
+            if (error) throw error;
+            setPlayers(data || []);
+        } catch (err) {
+            console.error('Failed to fetch players:', err);
+        }
+    }, [roomId]);
+
+    // ========================================
+    // INITIAL DATA FETCH
+    // ========================================
     useEffect(() => {
         if (!roomId) {
             setLoading(false);
             return;
         }
 
-        const fetchRoom = async () => {
+        const fetchInitialData = async () => {
             try {
+                // Fetch room metadata
                 const { data: roomData, error: roomError } = await supabase
                     .from('uno_rooms')
                     .select('*')
@@ -137,17 +111,22 @@ const useUnoGame = (roomId) => {
                 if (roomError) throw roomError;
                 setRoom(roomData);
 
-                const { data: playersData } = await supabase
-                    .from('uno_players')
+                // Fetch public state
+                const { data: publicData, error: publicError } = await supabase
+                    .from('uno_public_states')
                     .select('*')
-                    .eq('room_id', roomId);
+                    .eq('room_id', roomId)
+                    .single();
 
-                setPlayers(playersData || []);
+                if (publicError) throw publicError;
+                setPublicState(publicData);
 
-                // Get my hand
-                const myPlayerData = playersData?.find(p => String(p.user_id) === String(user?.id));
-                if (myPlayerData?.hand) {
-                    setMyHand(myPlayerData.hand);
+                // Fetch players
+                await fetchPlayers();
+
+                // Fetch my hand if game is in progress
+                if (publicData?.status === 'playing') {
+                    await fetchMyHand();
                 }
 
             } catch (err) {
@@ -157,10 +136,119 @@ const useUnoGame = (roomId) => {
             }
         };
 
-        fetchRoom();
-    }, [roomId, user?.id]);
+        fetchInitialData();
+    }, [roomId, fetchPlayers, fetchMyHand]);
 
-    // Create a new room
+    // ========================================
+    // REALTIME SUBSCRIPTION (Public State ONLY!)
+    // ========================================
+    useEffect(() => {
+        if (!roomId || !user?.id) return;
+
+        const subscription = supabase
+            .channel(`uno-public-${roomId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'uno_public_states',
+                filter: `room_id=eq.${roomId}`
+            }, async (payload) => {
+                if (payload.eventType === 'DELETE') {
+                    toast.error('Room was closed');
+                    navigate('/games/uno');
+                    return;
+                }
+
+                const newState = payload.new;
+                setPublicState(newState);
+
+                // Handle different events
+                const eventKey = `${newState.last_event}-${newState.updated_at}`;
+
+                if (eventKey !== lastFetchedEventRef.current) {
+                    lastFetchedEventRef.current = eventKey;
+
+                    switch (newState.last_event) {
+                        case 'game_started':
+                            // Everyone needs their hand
+                            await fetchMyHand();
+                            await fetchPlayers();
+                            toast.success('Game started!');
+                            break;
+
+                        case 'card_played':
+                        case 'card_drawn':
+                            // Fetch hand only if it was MY action or I'm the victim of +2/+4
+                            if (newState.last_event_user_id === user.id) {
+                                // My own action - hand already updated optimistically
+                                // But fetch to ensure sync
+                                await fetchMyHand();
+                            } else {
+                                // Someone else played - only fetch if I might have received cards
+                                const myIndex = room?.player_order?.indexOf(user.id);
+                                const currentIndex = newState.current_turn_index;
+                                // If it's now my turn after a +2/+4, I need to refresh
+                                if (myIndex === currentIndex) {
+                                    await fetchMyHand();
+                                }
+                            }
+                            break;
+
+                        case 'player_joined':
+                        case 'player_left':
+                            await fetchPlayers();
+                            // Refetch room to get updated player_order
+                            const { data: roomData } = await supabase
+                                .from('uno_rooms')
+                                .select('*')
+                                .eq('id', roomId)
+                                .single();
+                            if (roomData) setRoom(roomData);
+
+                            if (newState.last_event === 'player_joined') {
+                                toast.success('A player joined the room!');
+                            } else {
+                                toast('A player left the room');
+                            }
+                            break;
+
+                        case 'player_ready':
+                            await fetchPlayers();
+                            break;
+
+                        case 'uno_called':
+                            if (newState.last_event_user_id !== user.id) {
+                                const caller = players.find(p => p.user_id === newState.last_event_user_id);
+                                toast(`${caller?.username || 'Player'} called UNO!`, { icon: '🎴' });
+                            }
+                            break;
+
+                        case 'game_over':
+                            await fetchPlayers();
+                            refreshUser();
+                            if (newState.winner_id === user.id) {
+                                toast.success(`🎉 You won!`, { duration: 5000 });
+                            } else {
+                                toast(`${newState.winner_username} won the game!`);
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [roomId, user?.id, navigate, fetchMyHand, fetchPlayers, room?.player_order, players, refreshUser]);
+
+    // ========================================
+    // ROOM ACTIONS
+    // ========================================
+
     const createRoom = useCallback(async (betAmount, maxPlayers = 4) => {
         try {
             const { data, error } = await supabase.rpc('fn_create_uno_room', {
@@ -182,7 +270,6 @@ const useUnoGame = (roomId) => {
         }
     }, [user?.id, refreshUser]);
 
-    // Join a room
     const joinRoom = useCallback(async () => {
         if (!roomId) return { success: false, error: 'No room ID' };
 
@@ -197,8 +284,6 @@ const useUnoGame = (roomId) => {
 
             refreshUser();
             toast.success('Joined room!');
-            // Request room state broadcast to all players
-            socketRef.current?.emit('requestRoomState', { roomId });
             return { success: true };
 
         } catch (err) {
@@ -207,7 +292,6 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id, refreshUser]);
 
-    // Leave room
     const leaveRoom = useCallback(async () => {
         if (!roomId) return;
 
@@ -219,7 +303,6 @@ const useUnoGame = (roomId) => {
 
             if (error) throw error;
 
-            socketRef.current?.emit('leaveRoom', { roomId });
             refreshUser();
 
             if (data.refunded) {
@@ -231,54 +314,6 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id, refreshUser]);
 
-    // Toggle ready status
-    const toggleReady = useCallback(async () => {
-        try {
-            // Optimistic update - immediately update local state
-            setPlayers(prev => prev.map(p =>
-                String(p.user_id) === String(user?.id)
-                    ? { ...p, is_ready: !p.is_ready }
-                    : p
-            ));
-
-            const { data, error } = await supabase.rpc('fn_uno_toggle_ready', {
-                p_user_id: user.id,
-                p_room_id: roomId
-            });
-
-            if (error) throw error;
-            if (!data.success) throw new Error(data.error);
-
-            // Request room state broadcast via Socket.IO (no Supabase egress)
-            socketRef.current?.emit('requestRoomState', { roomId });
-
-        } catch (err) {
-            toast.error(err.message);
-            // Revert optimistic update on error - request fresh state
-            socketRef.current?.emit('requestRoomState', { roomId });
-        }
-    }, [roomId, user?.id]);
-
-    // Start game (host only)
-    const startGame = useCallback(async () => {
-        try {
-            const { data, error } = await supabase.rpc('fn_start_uno_game', {
-                p_user_id: user.id,
-                p_room_id: roomId
-            });
-
-            if (error) throw error;
-            if (!data.success) throw new Error(data.error);
-
-            socketRef.current?.emit('gameStarted', { roomId });
-            toast.success('Game started!');
-
-        } catch (err) {
-            toast.error(err.message);
-        }
-    }, [roomId, user?.id]);
-
-    // Delete room (host only)
     const deleteRoom = useCallback(async () => {
         try {
             const confirmed = window.confirm('Are you sure you want to delete this room? All players will be refunded.');
@@ -300,9 +335,63 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id, navigate]);
 
-    // Play a card
-    const playCard = useCallback(async (cardIndex, wildColor = null) => {
+    const toggleReady = useCallback(async () => {
         try {
+            // Optimistic update
+            setPlayers(prev => prev.map(p =>
+                String(p.user_id) === String(user?.id)
+                    ? { ...p, is_ready: !p.is_ready }
+                    : p
+            ));
+
+            const { data, error } = await supabase.rpc('fn_uno_toggle_ready', {
+                p_user_id: user.id,
+                p_room_id: roomId
+            });
+
+            if (error) throw error;
+            if (!data.success) throw new Error(data.error);
+
+        } catch (err) {
+            toast.error(err.message);
+            // Revert on error
+            await fetchPlayers();
+        }
+    }, [roomId, user?.id, fetchPlayers]);
+
+    const startGame = useCallback(async () => {
+        try {
+            const { data, error } = await supabase.rpc('fn_start_uno_game', {
+                p_user_id: user.id,
+                p_room_id: roomId
+            });
+
+            if (error) throw error;
+            if (!data.success) throw new Error(data.error);
+
+            // Hand will be fetched via Realtime subscription when game_started event fires
+
+        } catch (err) {
+            toast.error(err.message);
+        }
+    }, [roomId, user?.id]);
+
+    // ========================================
+    // GAMEPLAY ACTIONS (with Optimistic UI)
+    // ========================================
+
+    const playCard = useCallback(async (cardIndex, wildColor = null) => {
+        if (isSending) return { success: false, error: 'Already sending' };
+
+        // Get the card before removing
+        const playedCard = myHand[cardIndex];
+        if (!playedCard) return { success: false, error: 'Invalid card' };
+
+        try {
+            // OPTIMISTIC UI: Remove card immediately
+            setIsSending(true);
+            setMyHand(prev => prev.filter((_, i) => i !== cardIndex));
+
             const { data, error } = await supabase.rpc('fn_uno_play_card', {
                 p_user_id: user.id,
                 p_room_id: roomId,
@@ -313,18 +402,6 @@ const useUnoGame = (roomId) => {
             if (error) throw error;
             if (!data.success) throw new Error(data.error);
 
-            // Emit to socket for live updates
-            const playedCard = myHand[cardIndex];
-            socketRef.current?.emit('cardPlayed', {
-                roomId,
-                card: playedCard,
-                playerId: user?.id,
-                newColor: wildColor || playedCard?.color
-            });
-
-            // Update local hand
-            setMyHand(prev => prev.filter((_, i) => i !== cardIndex));
-
             // Check for game over
             if (data.gameOver) {
                 refreshUser();
@@ -334,14 +411,25 @@ const useUnoGame = (roomId) => {
             return { success: true, ...data };
 
         } catch (err) {
+            // REVERT on error: Put card back
+            setMyHand(prev => {
+                const newHand = [...prev];
+                newHand.splice(cardIndex, 0, playedCard);
+                return newHand;
+            });
             toast.error(err.message);
             return { success: false, error: err.message };
+        } finally {
+            setIsSending(false);
         }
-    }, [roomId, user?.id, myHand, refreshUser]);
+    }, [roomId, user?.id, myHand, refreshUser, isSending]);
 
-    // Draw a card
     const drawCard = useCallback(async () => {
+        if (isSending) return { success: false, error: 'Already sending' };
+
         try {
+            setIsSending(true);
+
             const { data, error } = await supabase.rpc('fn_uno_draw_card', {
                 p_user_id: user.id,
                 p_room_id: roomId
@@ -355,17 +443,16 @@ const useUnoGame = (roomId) => {
                 setMyHand(prev => [...prev, data.drawnCard]);
             }
 
-            socketRef.current?.emit('cardDrawn', { roomId, playerId: user?.id });
-
             return { success: true, card: data.drawnCard };
 
         } catch (err) {
             toast.error(err.message);
             return { success: false, error: err.message };
+        } finally {
+            setIsSending(false);
         }
-    }, [roomId, user?.id]);
+    }, [roomId, user?.id, isSending]);
 
-    // Call UNO
     const shoutUno = useCallback(async () => {
         try {
             const { data, error } = await supabase.rpc('fn_uno_call_uno', {
@@ -376,42 +463,40 @@ const useUnoGame = (roomId) => {
             if (error) throw error;
             if (!data.success) throw new Error(data.error);
 
-            socketRef.current?.emit('unoCall', {
-                roomId,
-                userId: user?.id,
-                username: user?.username
-            });
-
             toast.success('UNO!', { icon: '🎴' });
 
         } catch (err) {
             toast.error(err.message);
         }
-    }, [roomId, user?.id, user?.username]);
+    }, [roomId, user?.id]);
 
-    // Challenge UNO (not implemented yet - future feature)
     const challengeUno = useCallback(async (targetUserId) => {
         toast('Challenge feature coming soon!');
     }, []);
 
-    // Check if a card can be played
+    // ========================================
+    // UTILITY FUNCTIONS
+    // ========================================
+
     const isCardPlayable = useCallback((card) => {
-        if (!room || !card) return false;
+        if (!publicState || !card) return false;
 
         // Wild cards can always be played
         if (card.type === 'wild') return true;
 
         // Match by color
-        if (card.color === room.current_color) return true;
+        if (card.color === publicState.current_color) return true;
 
         // Match by value
-        if (card.value === room.top_card?.value) return true;
+        if (card.value === publicState.top_card?.value) return true;
 
         return false;
-    }, [room]);
+    }, [publicState]);
 
     return {
-        room,
+        // Use merged room for backwards compatibility
+        room: mergedRoom,
+        publicState,
         players,
         myHand,
         loading,
@@ -420,6 +505,7 @@ const useUnoGame = (roomId) => {
         currentPlayer,
         canCallUno,
         myPlayer,
+        isSending,
 
         // Actions
         createRoom,

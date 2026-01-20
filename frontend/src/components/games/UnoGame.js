@@ -22,6 +22,7 @@ const UnoGame = () => {
         isMyTurn,
         currentPlayer,
         canCallUno,
+        isSending,
         joinRoom,
         leaveRoom,
         deleteRoom,
@@ -113,6 +114,8 @@ const UnoGame = () => {
 
     // Handle card click
     const handleCardClick = useCallback(async (cardIndex) => {
+        if (isSending) return; // Prevent double-clicks during optimistic update
+
         if (!isMyTurn) {
             toast.error("Not your turn!");
             return;
@@ -137,7 +140,7 @@ const UnoGame = () => {
             setShakingCard(cardIndex);
             setTimeout(() => setShakingCard(null), 500);
         }
-    }, [isMyTurn, myHand, isCardPlayable, playCard]);
+    }, [isMyTurn, isSending, myHand, isCardPlayable, playCard]);
 
     const handleColorSelect = async (color) => {
         setShowColorPicker(false);
@@ -181,7 +184,9 @@ const UnoGame = () => {
 
     // Render opponent card backs
     const renderOpponentCards = (opponent, isVertical = false) => {
-        const cardCount = opponent?.hand?.length || opponent?.hand_count || 0;
+        // In split state, opponent hands are in hidden_states, not uno_players
+        // We track card count via hand_count field or fallback to 7 (initial deal)
+        const cardCount = opponent?.hand_count || 7;
         const isActive = room?.player_order?.[room.current_turn_index] === opponent?.user_id;
 
         return (
