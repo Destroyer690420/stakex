@@ -20,10 +20,8 @@ const LandscapeUnoGame = () => {
         loading,
         error,
         isMyTurn,
-        currentPlayer,
         canCallUno,
         isSending,
-        joinRoom,
         leaveRoom,
         playCard,
         drawCard,
@@ -40,8 +38,7 @@ const LandscapeUnoGame = () => {
     const timerRef = useRef(null);
     const handContainerRef = useRef(null);
 
-    // Get my player info
-    const myPlayer = players.find(p => String(p.user_id) === String(user?.id));
+    // Get opponents
     const opponents = players.filter(p => String(p.user_id) !== String(user?.id));
 
     // Turn timer
@@ -135,10 +132,7 @@ const LandscapeUnoGame = () => {
         return value;
     };
 
-    // Get player by user_id
-    const getPlayerByUserId = (userId) => {
-        return players.find(p => p.user_id === userId);
-    };
+
 
     // Check if player is active (their turn)
     const isPlayerActive = (player) => {
