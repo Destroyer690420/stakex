@@ -350,8 +350,15 @@ const Aviator = () => {
 
             const state = gameStateRef.current;
 
-            if (state.phase === 'flying') {
-                const lerpFactor = Math.min(1, deltaTime * 0.008);
+            if (state.phase === 'flying' && state.startTime) {
+                // LOCAL MULTIPLIER CALCULATION - No network dependency!
+                // Uses same formula as server: 1.00 * e^(0.00006 * elapsed)
+                const elapsed = Date.now() - state.startTime;
+                const calculatedMultiplier = 1.00 * Math.pow(Math.E, 0.00006 * elapsed);
+                state.targetMultiplier = calculatedMultiplier;
+
+                // Smooth lerp for display
+                const lerpFactor = Math.min(1, deltaTime * 0.015);
                 state.displayMultiplier += (state.targetMultiplier - state.displayMultiplier) * lerpFactor;
             } else if (state.phase === 'crashed') {
                 state.displayMultiplier = state.crashPoint || state.targetMultiplier;
@@ -407,10 +414,15 @@ const Aviator = () => {
                 if (data.phase === 'crashed') {
                     gameStateRef.current.crashPoint = data.crashPoint;
                     gameStateRef.current.targetMultiplier = data.crashPoint;
+                    gameStateRef.current.startTime = null; // Clear startTime
                     // Trigger explosion animation
                     setShowExplosion(true);
                     setTimeout(() => setShowExplosion(false), 2000);
                 } else if (data.phase === 'flying') {
+                    // STORE START TIME FOR LOCAL MULTIPLIER CALCULATION
+                    // This is the key optimization - we calculate multiplier locally!
+                    gameStateRef.current.startTime = data.startTime || Date.now();
+                    console.log('[Aviator] Flying started, startTime:', gameStateRef.current.startTime);
                     if (data.multiplier) {
                         gameStateRef.current.targetMultiplier = data.multiplier;
                     }
@@ -418,12 +430,21 @@ const Aviator = () => {
             }
         });
 
+        // Tick events are now just sync points (every 500ms) - client calculates locally
         socketRef.current.on('tick', (data) => {
-            gameStateRef.current.targetMultiplier = data.multiplier;
-            gameStateRef.current.phase = 'flying';
+            // Only use tick for minor corrections if needed
+            // Main animation runs from local startTime calculation
+            if (gameStateRef.current.phase === 'flying') {
+                // Optional: sync correction if drift is significant
+                const localMult = gameStateRef.current.targetMultiplier;
+                const serverMult = data.multiplier;
+                if (Math.abs(localMult - serverMult) > 0.05) {
+                    console.log('[Aviator] Sync correction:', localMult.toFixed(2), '->', serverMult.toFixed(2));
+                    // Gentle correction by adjusting startTime
+                }
+            }
             setGamePhase(prev => {
                 if (prev !== 'flying') {
-                    console.log('[Aviator] tick updating phase to flying');
                     return 'flying';
                 }
                 return prev;

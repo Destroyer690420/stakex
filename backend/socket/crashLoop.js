@@ -21,6 +21,12 @@ let roundStartTime = null;
 let isCrashing = false;
 let io = null;
 
+// ============================================
+// IN-MEMORY BET CACHE - Fixes Supabase egress leak
+// Stores all bets for the current round to avoid querying DB every tick
+// ============================================
+let roundBetsCache = new Map(); // key: `${userId}_${betNumber}` -> bet object
+
 /**
  * Generate provably fair crash point
  * Uses SHA256 hash of server seed
@@ -85,6 +91,9 @@ async function createRound() {
  * Start waiting phase
  */
 async function startWaitingPhase() {
+    // Clear bet cache for new round
+    roundBetsCache.clear();
+
     console.log('🎰 [Aviator] Starting new round...');
 
     currentRound = await createRound();
@@ -155,8 +164,10 @@ async function gameTick() {
     // Check for auto cashouts
     await processAutoCashouts(multiplier);
 
-    // Emit tick (check round still exists)
-    if (currentRound && !isCrashing) {
+    // Emit tick at reduced frequency (every 500ms instead of 100ms)
+    // Client calculates multiplier locally for smooth animation
+    // This is just a sync tick for correction
+    if (currentRound && !isCrashing && elapsed % 500 < CONFIG.TICK_INTERVAL) {
         io.to('aviator').emit('tick', {
             multiplier: parseFloat(multiplier.toFixed(2)),
             elapsed: elapsed
@@ -165,25 +176,31 @@ async function gameTick() {
 }
 
 /**
- * Process auto cashouts
+ * Process auto cashouts - OPTIMIZED: Uses in-memory cache instead of DB queries
+ * This eliminates ~10 database queries per second during flying phase
  */
 async function processAutoCashouts(currentMultiplier) {
     if (!currentRound) return;
 
-    // Get active bets with auto cashout <= current multiplier
-    const { data: bets, error } = await supabase
-        .from('crash_bets')
-        .select('*')
-        .eq('round_id', currentRound.id)
-        .eq('status', 'active')
-        .not('auto_cashout', 'is', null)
-        .lte('auto_cashout', currentMultiplier);
+    // Iterate over in-memory cache - NO DATABASE QUERY!
+    for (const [key, bet] of roundBetsCache.entries()) {
+        // Only process active bets with auto cashout that has been reached
+        if (bet.status === 'active' &&
+            bet.autoCashout &&
+            bet.autoCashout <= currentMultiplier) {
 
-    if (error || !bets) return;
+            // Mark as processing to prevent duplicate cashouts
+            bet.status = 'cashing_out';
 
-    // Process each auto cashout
-    for (const bet of bets) {
-        await cashOutBet(bet.user_id, bet.bet_number, bet.auto_cashout);
+            const result = await cashOutBet(bet.userId, bet.betNumber, bet.autoCashout);
+
+            if (result.success) {
+                bet.status = 'cashed_out';
+            } else {
+                // If cashout failed, mark as active again for retry
+                bet.status = 'active';
+            }
+        }
     }
 }
 
@@ -327,6 +344,18 @@ async function handlePlaceBet(socket, data) {
     socket.emit('bet_result', betResult);
 
     if (result?.success) {
+        // Add bet to in-memory cache for efficient auto-cashout processing
+        const cacheKey = `${userId}_${betNumber}`;
+        roundBetsCache.set(cacheKey, {
+            odbyId: result.bet_id,
+            userId: userId,
+            betNumber: Number(betNumber),
+            amount: amount,
+            autoCashout: autoCashout || null,
+            status: 'active'
+        });
+        console.log(`[Aviator] Bet cached: ${cacheKey}, total cached: ${roundBetsCache.size}`);
+
         // Get user info for broadcast
         const { data: user } = await supabase
             .from('users')
@@ -375,6 +404,16 @@ async function handleCashOut(socket, data) {
     }
 
     const result = await cashOutBet(userId, betNumber, finalMultiplier);
+
+    // Mark bet as cashed out in cache
+    if (result.success) {
+        const cacheKey = `${userId}_${betNumber}`;
+        const cachedBet = roundBetsCache.get(cacheKey);
+        if (cachedBet) {
+            cachedBet.status = 'cashed_out';
+        }
+    }
+
     socket.emit('cashout_result', result);
 }
 
