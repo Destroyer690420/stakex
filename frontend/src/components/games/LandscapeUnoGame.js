@@ -64,7 +64,7 @@ const LandscapeUnoGame = () => {
     const gameStatus = room?.status;
 
     // ========================================
-    // TURN TIMER - Stable implementation
+    // TURN TIMER - With safeguards against premature auto-draw
     // ========================================
     useEffect(() => {
         // Clear any existing timer
@@ -83,39 +83,48 @@ const LandscapeUnoGame = () => {
         setTurnTimeLeft(TURN_DURATION);
         autoDrawnRef.current = false;
 
-        // Start countdown - use refs for callbacks to avoid dependency issues
-        timerRef.current = setInterval(() => {
-            setTurnTimeLeft(prev => {
-                const newTime = prev - 1;
+        // Start countdown after a small delay to let state stabilize
+        const startTimer = setTimeout(() => {
+            timerRef.current = setInterval(() => {
+                setTurnTimeLeft(prev => {
+                    const newTime = prev - 1;
 
-                // Check for timeout
-                if (newTime <= 0) {
-                    // Auto-draw only if it's my turn and hasn't been done yet
-                    if (isMyTurnRef.current && !autoDrawnRef.current) {
-                        autoDrawnRef.current = true;
-                        // Execute draw in next tick
-                        setTimeout(() => {
-                            if (drawCardRef.current) {
-                                drawCardRef.current().catch(err => {
-                                    console.error('Auto-draw failed:', err);
-                                });
-                            }
-                        }, 0);
+                    // Check for timeout - only auto-draw at exactly 0
+                    if (newTime === 0) {
+                        // Double-check it's still my turn using current ref
+                        // and that we haven't already drawn
+                        if (isMyTurnRef.current && !autoDrawnRef.current) {
+                            autoDrawnRef.current = true;
+                            // Execute draw after a small delay to ensure stability
+                            setTimeout(() => {
+                                // Final check before drawing
+                                if (drawCardRef.current && isMyTurnRef.current) {
+                                    drawCardRef.current().catch(err => {
+                                        console.error('Auto-draw failed:', err);
+                                    });
+                                }
+                            }, 100);
+                        }
+                        return TURN_DURATION;
                     }
-                    return TURN_DURATION;
-                }
 
-                return newTime;
-            });
-        }, 1000);
+                    if (newTime < 0) {
+                        return TURN_DURATION;
+                    }
+
+                    return newTime;
+                });
+            }, 1000);
+        }, 500); // Wait 500ms before starting timer to let state settle
 
         return () => {
+            clearTimeout(startTimer);
             if (timerRef.current) {
                 clearInterval(timerRef.current);
                 timerRef.current = null;
             }
         };
-    }, [currentTurnIndex, gameStatus]); // Only depends on turn index and game status
+    }, [currentTurnIndex, gameStatus]);
 
     // ========================================
     // CARD CLICK HANDLER
