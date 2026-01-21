@@ -9,15 +9,20 @@ import toast from 'react-hot-toast';
  * 
  * Architecture:
  * - Single subscription to uno_rooms table
- * - All state in one place (players, hands, deck, discard)
- * - Timer syncs to current_turn_index changes
+ * - All state replaced on each realtime update (no merging)
+ * - Timer resets on current_turn_index change
+ * - Host acts as authority for auto-draw after 20s timeout
  */
+
+const TURN_DURATION = 15;
+const AUTO_DRAW_TIMEOUT = 20;
+
 const useUnoGame = (roomId) => {
     const navigate = useNavigate();
     const { user, refreshUser } = useContext(AuthContext);
 
     // ========================================
-    // STATE - Single source of truth
+    // STATE - Single source of truth from server
     // ========================================
     const [room, setRoom] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -25,9 +30,11 @@ const useUnoGame = (roomId) => {
     const [isSending, setIsSending] = useState(false);
 
     // Timer state
-    const [turnTimeLeft, setTurnTimeLeft] = useState(15);
+    const [turnTimeLeft, setTurnTimeLeft] = useState(TURN_DURATION);
     const timerRef = useRef(null);
+    const autoDrawTimeoutRef = useRef(null);
     const autoDrawnRef = useRef(false);
+    const lastTurnIndexRef = useRef(null);
 
     // ========================================
     // DERIVED VALUES
@@ -52,6 +59,9 @@ const useUnoGame = (roomId) => {
         return mySeatIndex === currentTurnIndex;
     }, [room?.status, mySeatIndex, currentTurnIndex]);
 
+    // Am I the host?
+    const isHost = room?.host_id === user?.id;
+
     // My hand (from players array)
     const myHand = myPlayer?.hand ?? [];
 
@@ -65,7 +75,6 @@ const useUnoGame = (roomId) => {
     // All players (for display)
     const players = room?.players ?? [];
 
-    // Opponents
     // Opponents
     const opponents = useMemo(() => {
         const currentPlayers = room?.players ?? [];
@@ -119,7 +128,9 @@ const useUnoGame = (roomId) => {
     }, [roomId, fetchRoom]);
 
     // ========================================
-    // REALTIME SUBSCRIPTION - Single subscription to uno_rooms
+    // REALTIME SUBSCRIPTION
+    // Single subscription to uno_rooms table
+    // Replaces entire state on each update
     // ========================================
     useEffect(() => {
         if (!roomId) return;
@@ -142,7 +153,7 @@ const useUnoGame = (roomId) => {
                     return;
                 }
 
-                // Update room state with new data
+                // Replace entire room state with server data
                 const newRoom = payload.new;
                 setRoom(newRoom);
 
@@ -158,59 +169,87 @@ const useUnoGame = (roomId) => {
             })
             .subscribe();
 
+        // Cleanup on unmount
         return () => {
-            console.log('[UNO] Cleaning up subscription');
+            console.log('[UNO] Cleaning up Realtime subscription');
             channel.unsubscribe();
         };
     }, [roomId, navigate, user?.id, refreshUser]);
 
     // ========================================
-    // TIMER - Syncs to current_turn_index changes
+    // TIMER - Resets on current_turn_index change
     // ========================================
     useEffect(() => {
-        // Clear any existing timer
+        // Clear existing timers
         if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
         }
+        if (autoDrawTimeoutRef.current) {
+            clearTimeout(autoDrawTimeoutRef.current);
+            autoDrawTimeoutRef.current = null;
+        }
 
         // Only run during active game
         if (room?.status !== 'playing') {
-            setTurnTimeLeft(15);
+            setTurnTimeLeft(TURN_DURATION);
             return;
         }
 
-        // Reset timer when turn changes
-        console.log('[UNO] Turn changed to:', currentTurnIndex, 'isMyTurn:', isMyTurn);
-        setTurnTimeLeft(15);
-        autoDrawnRef.current = false;
+        // Detect turn change
+        const turnChanged = lastTurnIndexRef.current !== currentTurnIndex;
+        lastTurnIndexRef.current = currentTurnIndex;
 
-        // Start countdown
+        if (turnChanged) {
+            console.log('[UNO] Turn changed to:', currentTurnIndex, 'isMyTurn:', isMyTurn, 'isHost:', isHost);
+            // Reset timer on turn change
+            setTurnTimeLeft(TURN_DURATION);
+            autoDrawnRef.current = false;
+        }
+
+        // Start countdown timer
         timerRef.current = setInterval(() => {
             setTurnTimeLeft(prev => {
                 if (prev <= 1) {
-                    // Time's up - auto draw if it's my turn
-                    if (isMyTurn && !autoDrawnRef.current) {
-                        autoDrawnRef.current = true;
-                        console.log('[UNO] Timer expired, auto-drawing');
-                        // Execute in next tick
-                        setTimeout(() => {
-                            drawCardInternal().catch(console.error);
-                        }, 0);
-                    }
-                    return 15;
+                    return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
+
+        // Set up auto-draw timeout (host authority after 20s)
+        // If it's my turn, I auto-draw for myself
+        // If it's not my turn but I'm host, I auto-draw for the stalled player after 20s
+        if (isMyTurn && !autoDrawnRef.current) {
+            autoDrawTimeoutRef.current = setTimeout(() => {
+                if (!autoDrawnRef.current) {
+                    autoDrawnRef.current = true;
+                    console.log('[UNO] Auto-draw triggered (my turn timeout)');
+                    drawCardInternal().catch(console.error);
+                }
+            }, (AUTO_DRAW_TIMEOUT * 1000));
+        } else if (isHost && !isMyTurn && !autoDrawnRef.current) {
+            // Host auto-draw fallback for stalled players
+            autoDrawTimeoutRef.current = setTimeout(() => {
+                if (!autoDrawnRef.current) {
+                    autoDrawnRef.current = true;
+                    console.log('[UNO] Host forcing auto-draw for stalled player');
+                    forceDrawForCurrentPlayer().catch(console.error);
+                }
+            }, ((AUTO_DRAW_TIMEOUT + 5) * 1000)); // Host waits extra 5s
+        }
 
         return () => {
             if (timerRef.current) {
                 clearInterval(timerRef.current);
                 timerRef.current = null;
             }
+            if (autoDrawTimeoutRef.current) {
+                clearTimeout(autoDrawTimeoutRef.current);
+                autoDrawTimeoutRef.current = null;
+            }
         };
-    }, [currentTurnIndex, room?.status, isMyTurn]);
+    }, [currentTurnIndex, room?.status, isMyTurn, isHost]);
 
     // ========================================
     // GAME ACTIONS
@@ -401,6 +440,31 @@ const useUnoGame = (roomId) => {
         }
     }, [roomId, user?.id]);
 
+    // Host force draw for stalled player (still uses the current player's ID from room)
+    const forceDrawForCurrentPlayer = useCallback(async () => {
+        if (!roomId || !room?.players) return { success: false };
+
+        const currentPlayer = room.players[room.current_turn_index];
+        if (!currentPlayer) return { success: false };
+
+        try {
+            // Host calls draw on behalf of stalled player
+            const { data, error: rpcError } = await supabase.rpc('fn_draw_card', {
+                p_user_id: currentPlayer.user_id,
+                p_room_id: roomId
+            });
+
+            if (rpcError) throw rpcError;
+            if (!data.success) throw new Error(data.error);
+
+            console.log('[UNO] Host forced draw for:', currentPlayer.username);
+            return { success: true, data };
+        } catch (err) {
+            console.error('[UNO] Host force draw failed:', err);
+            return { success: false, error: err.message };
+        }
+    }, [roomId, room?.players, room?.current_turn_index]);
+
     const drawCard = useCallback(async () => {
         // Safety check
         if (!isMyTurn) {
@@ -460,6 +524,7 @@ const useUnoGame = (roomId) => {
         gameStatus: room?.status ?? 'waiting',
         canCallUno,
         isSending,
+        isHost,
 
         // Actions
         createRoom,

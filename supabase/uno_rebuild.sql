@@ -14,15 +14,15 @@ DROP FUNCTION IF EXISTS fn_create_uno_room(uuid, numeric, integer);
 DROP FUNCTION IF EXISTS fn_join_uno_room(uuid, uuid);
 DROP FUNCTION IF EXISTS fn_uno_toggle_ready(uuid, uuid);
 DROP FUNCTION IF EXISTS fn_start_uno(uuid, uuid);
-DROP FUNCTION IF EXISTS fn_start_uno_game(uuid, uuid); -- Legacy name
+DROP FUNCTION IF EXISTS fn_start_uno_game(uuid, uuid);
 DROP FUNCTION IF EXISTS fn_play_card(uuid, uuid, integer, text);
-DROP FUNCTION IF EXISTS fn_uno_play_card(uuid, uuid, integer, text); -- Legacy name
+DROP FUNCTION IF EXISTS fn_uno_play_card(uuid, uuid, integer, text);
 DROP FUNCTION IF EXISTS fn_draw_card(uuid, uuid);
-DROP FUNCTION IF EXISTS fn_uno_draw_card(uuid, uuid); -- Legacy name
+DROP FUNCTION IF EXISTS fn_uno_draw_card(uuid, uuid);
 DROP FUNCTION IF EXISTS fn_leave_uno_room(uuid, uuid);
 DROP FUNCTION IF EXISTS fn_delete_uno_room(uuid, uuid);
 DROP FUNCTION IF EXISTS fn_get_uno_rooms();
-DROP FUNCTION IF EXISTS fn_uno_call_uno(uuid, uuid); -- Legacy name
+DROP FUNCTION IF EXISTS fn_uno_call_uno(uuid, uuid);
 DROP FUNCTION IF EXISTS generate_uno_deck();
 DROP FUNCTION IF EXISTS shuffle_deck(jsonb);
 
@@ -63,7 +63,7 @@ CREATE TABLE uno_rooms (
 ALTER PUBLICATION supabase_realtime ADD TABLE uno_rooms;
 
 -- ========================================
--- HELPER: Generate UNO Deck
+-- HELPER: Generate UNO Deck (108 cards)
 -- ========================================
 CREATE OR REPLACE FUNCTION generate_uno_deck()
 RETURNS JSONB
@@ -255,6 +255,7 @@ $$;
 
 -- ========================================
 -- RPC: Start Game
+-- Shuffles deck, deals 7 cards each, sets first discard
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_start_uno(p_user_id UUID, p_room_id UUID)
 RETURNS JSONB
@@ -279,6 +280,13 @@ BEGIN
     v_player_count := jsonb_array_length(v_room.players);
     IF v_player_count < 2 THEN RETURN jsonb_build_object('success', false, 'error', 'Need at least 2 players'); END IF;
     
+    -- Check all players ready
+    FOR i IN 0..v_player_count-1 LOOP
+        IF NOT (v_room.players->i->>'is_ready')::BOOLEAN THEN
+            RETURN jsonb_build_object('success', false, 'error', 'Not all players are ready');
+        END IF;
+    END LOOP;
+    
     -- Generate and shuffle deck
     v_deck := shuffle_deck(generate_uno_deck());
     
@@ -298,7 +306,7 @@ BEGIN
         v_players := v_players || jsonb_build_array(v_player);
     END LOOP;
     
-    -- Find first number card for discard pile
+    -- Find first number card for discard pile (skip action/wild cards)
     LOOP
         v_first_card := v_deck->0;
         v_deck := v_deck - 0;
@@ -306,7 +314,7 @@ BEGIN
         v_deck := v_deck || jsonb_build_array(v_first_card);
     END LOOP;
     
-    -- Update room
+    -- Update room with all game state
     UPDATE uno_rooms SET
         status = 'playing',
         deck = v_deck,
@@ -327,6 +335,7 @@ $$;
 
 -- ========================================
 -- RPC: Play Card
+-- Validates turn, card match, handles specials
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_play_card(p_user_id UUID, p_room_id UUID, p_card_index INTEGER, p_wild_color TEXT DEFAULT NULL)
 RETURNS JSONB
@@ -348,6 +357,7 @@ DECLARE
     v_victim JSONB;
     v_victim_hand JSONB;
     v_deck_card JSONB;
+    v_new_deck JSONB;
     i INTEGER;
 BEGIN
     SELECT * INTO v_room FROM uno_rooms WHERE id = p_room_id FOR UPDATE;
@@ -355,6 +365,7 @@ BEGIN
     IF v_room.status != 'playing' THEN RETURN jsonb_build_object('success', false, 'error', 'Game not in progress'); END IF;
     
     v_player_count := jsonb_array_length(v_room.players);
+    v_new_deck := v_room.deck;
     
     -- Find player and verify turn
     v_player_idx := -1;
@@ -426,11 +437,14 @@ BEGIN
         v_victim_hand := v_victim->'hand';
         
         FOR i IN 1..v_draw_count LOOP
-            IF jsonb_array_length(v_room.deck) > 0 THEN
-                v_deck_card := v_room.deck->0;
-                v_room.deck := v_room.deck - 0;
-                v_victim_hand := v_victim_hand || jsonb_build_array(v_deck_card);
+            -- Reshuffle if deck empty
+            IF jsonb_array_length(v_new_deck) = 0 THEN
+                v_new_deck := shuffle_deck(generate_uno_deck());
             END IF;
+            
+            v_deck_card := v_new_deck->0;
+            v_new_deck := v_new_deck - 0;
+            v_victim_hand := v_victim_hand || jsonb_build_array(v_deck_card);
         END LOOP;
         
         v_victim := jsonb_set(v_victim, '{hand}', v_victim_hand);
@@ -469,7 +483,7 @@ BEGIN
     
     -- Update room state
     UPDATE uno_rooms SET
-        deck = v_room.deck,
+        deck = v_new_deck,
         discard_pile = v_room.discard_pile || jsonb_build_array(v_card),
         current_color = COALESCE(p_wild_color, v_card->>'color'),
         players = v_players,
@@ -487,6 +501,7 @@ $$;
 
 -- ========================================
 -- RPC: Draw Card
+-- Draws from deck, advances turn
 -- ========================================
 CREATE OR REPLACE FUNCTION fn_draw_card(p_user_id UUID, p_room_id UUID)
 RETURNS JSONB
@@ -500,6 +515,7 @@ DECLARE
     v_players JSONB;
     v_player_count INTEGER;
     v_next_turn INTEGER;
+    v_new_deck JSONB;
     i INTEGER;
 BEGIN
     SELECT * INTO v_room FROM uno_rooms WHERE id = p_room_id FOR UPDATE;
@@ -507,6 +523,7 @@ BEGIN
     IF v_room.status != 'playing' THEN RETURN jsonb_build_object('success', false, 'error', 'Game not in progress'); END IF;
     
     v_player_count := jsonb_array_length(v_room.players);
+    v_new_deck := v_room.deck;
     
     -- Find player and verify turn
     v_player_idx := -1;
@@ -522,13 +539,13 @@ BEGIN
     IF v_room.current_turn_index != v_player_idx THEN RETURN jsonb_build_object('success', false, 'error', 'Not your turn'); END IF;
     
     -- Reshuffle if deck empty
-    IF jsonb_array_length(v_room.deck) = 0 THEN
-        v_room.deck := shuffle_deck(generate_uno_deck());
+    IF jsonb_array_length(v_new_deck) = 0 THEN
+        v_new_deck := shuffle_deck(generate_uno_deck());
     END IF;
     
     -- Draw card
-    v_card := v_room.deck->0;
-    v_room.deck := v_room.deck - 0;
+    v_card := v_new_deck->0;
+    v_new_deck := v_new_deck - 0;
     v_new_hand := v_player->'hand' || jsonb_build_array(v_card);
     
     -- Build new players array
@@ -547,7 +564,7 @@ BEGIN
     
     -- Update room
     UPDATE uno_rooms SET
-        deck = v_room.deck,
+        deck = v_new_deck,
         players = v_players,
         current_turn_index = v_next_turn,
         turn_started_at = NOW(),
@@ -623,14 +640,24 @@ BEGIN
         RETURN jsonb_build_object('success', true);
     END IF;
     
-    -- Update room
-    UPDATE uno_rooms SET
-        players = v_players,
-        pot_amount = CASE WHEN v_room.status = 'waiting' THEN v_room.pot_amount - v_room.bet_amount ELSE v_room.pot_amount END,
-        host_id = CASE WHEN v_room.host_id = p_user_id THEN (v_players->0->>'user_id')::UUID ELSE v_room.host_id END,
-        current_turn_index = CASE WHEN v_room.current_turn_index >= v_remaining THEN 0 ELSE v_room.current_turn_index END,
-        updated_at = NOW()
-    WHERE id = p_room_id;
+    -- Handle turn index adjustment if current player left
+    DECLARE
+        v_new_turn_index INTEGER := v_room.current_turn_index;
+    BEGIN
+        IF v_new_turn_index >= v_remaining THEN
+            v_new_turn_index := 0;
+        END IF;
+        
+        -- Update room
+        UPDATE uno_rooms SET
+            players = v_players,
+            pot_amount = CASE WHEN v_room.status = 'waiting' THEN v_room.pot_amount - v_room.bet_amount ELSE v_room.pot_amount END,
+            host_id = CASE WHEN v_room.host_id = p_user_id THEN (v_players->0->>'user_id')::UUID ELSE v_room.host_id END,
+            current_turn_index = v_new_turn_index,
+            turn_started_at = NOW(),
+            updated_at = NOW()
+        WHERE id = p_room_id;
+    END;
     
     RETURN jsonb_build_object('success', true);
 EXCEPTION WHEN OTHERS THEN
