@@ -75,6 +75,16 @@ const games = [
         new: true
     },
     {
+        id: 'baccarat',
+        name: 'Baccarat',
+        path: '/games/baccarat',
+        image: '/images/baccarat.png',
+        emoji: '🎴',
+        category: 'table',
+        featured: true,
+        new: true
+    },
+    {
         id: 'roulette',
         name: 'Roulette',
         path: '/games/roulette',

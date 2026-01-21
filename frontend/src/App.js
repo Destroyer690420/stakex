@@ -19,6 +19,7 @@ import Aviator from './components/games/Aviator';
 import DiceGame from './components/games/DiceGame';
 import UnoLobby from './components/games/UnoLobby';
 import UnoGame from './components/games/UnoGame';
+import Baccarat from './components/games/Baccarat';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
@@ -134,6 +135,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <DiceGame />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/baccarat"
+                element={
+                  <PrivateRoute>
+                    <Baccarat />
                   </PrivateRoute>
                 }
               />

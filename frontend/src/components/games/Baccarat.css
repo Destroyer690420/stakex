@@ -1,0 +1,922 @@
+/* ========================================
+   BACCARAT GAME STYLES
+   Matching reference: Dark blue table with
+   neon-bordered betting zones
+   ======================================== */
+
+/* Wrapper - Full viewport */
+.baccarat-wrapper {
+    min-height: 100vh;
+    width: 100%;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Main container */
+.baccarat-container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ========================================
+   SCOREBOARD
+   ======================================== */
+.baccarat-scoreboard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.score-bubble {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.score-bubble.player {
+    background: linear-gradient(145deg, #1e40af, #2563eb);
+    border: 3px solid #60a5fa;
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
+}
+
+.score-bubble.banker {
+    background: linear-gradient(145deg, #1a1a2a, #2d2d3d);
+    border: 3px solid #6b7280;
+    box-shadow: 0 0 20px rgba(107, 114, 128, 0.4);
+}
+
+.score-bubble.highlight {
+    animation: scorePulse 0.5s ease;
+}
+
+@keyframes scorePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+/* ========================================
+   GAME TABLE
+   ======================================== */
+.baccarat-table {
+    background: linear-gradient(180deg, #0d1b2a 0%, #1b263b 100%);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Main betting area */
+.baccarat-betting-area {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 8px;
+}
+
+/* Betting zones */
+.bet-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    min-height: 160px;
+    max-width: 260px;
+}
+
+.bet-zone:hover:not(.disabled) {
+    transform: translateY(-4px);
+}
+
+.bet-zone:active:not(.disabled) {
+    transform: translateY(-2px);
+}
+
+.bet-zone.disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Player zone - Blue */
+.bet-zone.player-zone {
+    background: linear-gradient(145deg, #1e3a8a, #2563eb);
+    border: 3px solid #60a5fa;
+    box-shadow:
+        0 0 30px rgba(37, 99, 235, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.bet-zone.player-zone:hover:not(.disabled) {
+    box-shadow:
+        0 0 40px rgba(37, 99, 235, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Tie zone - Green */
+.bet-zone.tie-zone {
+    background: linear-gradient(145deg, #064e3b, #059669);
+    border: 3px solid #34d399;
+    box-shadow:
+        0 0 30px rgba(5, 150, 105, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    flex: 0.8;
+    max-width: 180px;
+    border-radius: 50% 50% 20px 20px;
+}
+
+.bet-zone.tie-zone:hover:not(.disabled) {
+    box-shadow:
+        0 0 40px rgba(5, 150, 105, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Banker zone - Red */
+.bet-zone.banker-zone {
+    background: linear-gradient(145deg, #991b1b, #dc2626);
+    border: 3px solid #f87171;
+    box-shadow:
+        0 0 30px rgba(220, 38, 38, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.bet-zone.banker-zone:hover:not(.disabled) {
+    box-shadow:
+        0 0 40px rgba(220, 38, 38, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Zone content */
+.zone-bet-info {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.bet-percentage {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.zone-cards {
+    display: flex;
+    gap: 8px;
+    margin: 24px 0 12px;
+    min-height: 70px;
+    align-items: center;
+    justify-content: center;
+}
+
+.zone-label {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    margin-top: auto;
+}
+
+.zone-odds {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 4px;
+}
+
+.zone-bet-amount {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #d4af37;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* ========================================
+   CARDS
+   ======================================== */
+.baccarat-card {
+    width: 50px;
+    height: 70px;
+    border-radius: 8px;
+    background: linear-gradient(145deg, #fff, #f5f5f5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: cardFlip 0.4s ease-out;
+    transform-style: preserve-3d;
+}
+
+@keyframes cardFlip {
+    0% {
+        transform: rotateY(90deg) scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: rotateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.baccarat-card .card-rank {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.baccarat-card .card-suit {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.baccarat-card.red {
+    color: #dc2626;
+}
+
+.baccarat-card.black {
+    color: #1a1a1a;
+}
+
+.card-placeholder {
+    width: 50px;
+    height: 70px;
+    border-radius: 8px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================
+   CONTROL BAR
+   ======================================== */
+.baccarat-controls {
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Chip selector */
+.chip-selector {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.chip {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 3px solid;
+    box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.chip::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 70%;
+    height: 70%;
+    transform: translate(-50%, -50%);
+    border: 2px dashed currentColor;
+    border-radius: 50%;
+    opacity: 0.4;
+}
+
+.chip:hover {
+    transform: translateY(-4px);
+}
+
+.chip.selected {
+    transform: translateY(-6px) scale(1.1);
+    box-shadow:
+        0 8px 16px rgba(0, 0, 0, 0.4),
+        0 0 20px currentColor;
+}
+
+/* Chip colors by value */
+.chip[data-value="1"] {
+    background: linear-gradient(145deg, #6b7280, #4b5563);
+    border-color: #9ca3af;
+    color: #fff;
+}
+
+.chip[data-value="5"] {
+    background: linear-gradient(145deg, #dc2626, #991b1b);
+    border-color: #f87171;
+    color: #fff;
+}
+
+.chip[data-value="10"] {
+    background: linear-gradient(145deg, #2563eb, #1d4ed8);
+    border-color: #60a5fa;
+    color: #fff;
+}
+
+.chip[data-value="25"] {
+    background: linear-gradient(145deg, #059669, #047857);
+    border-color: #34d399;
+    color: #fff;
+}
+
+.chip[data-value="50"] {
+    background: linear-gradient(145deg, #7c3aed, #6d28d9);
+    border-color: #a78bfa;
+    color: #fff;
+}
+
+.chip[data-value="100"] {
+    background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+    border-color: #d4af37;
+    color: #d4af37;
+}
+
+.chip[data-value="500"] {
+    background: linear-gradient(145deg, #d4af37, #b8860b);
+    border-color: #f0d78c;
+    color: #1a1a1a;
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.action-btn {
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.action-btn.clear-btn {
+    background: linear-gradient(145deg, #374151, #1f2937);
+    color: #fff;
+    border: 2px solid #4b5563;
+}
+
+.action-btn.clear-btn:hover:not(:disabled) {
+    background: linear-gradient(145deg, #4b5563, #374151);
+    border-color: #6b7280;
+}
+
+.action-btn.rebet-btn {
+    background: linear-gradient(145deg, #1e40af, #1d4ed8);
+    color: #fff;
+    border: 2px solid #3b82f6;
+}
+
+.action-btn.rebet-btn:hover:not(:disabled) {
+    background: linear-gradient(145deg, #2563eb, #1e40af);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn.deal-btn {
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    color: #000;
+    border: 2px solid #d4af37;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+    min-width: 140px;
+}
+
+.action-btn.deal-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #f0d78c 0%, #d4af37 100%);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+    transform: translateY(-2px);
+}
+
+.action-btn.new-round-btn {
+    background: linear-gradient(145deg, #059669, #047857);
+    color: #fff;
+    border: 2px solid #34d399;
+    box-shadow: 0 4px 20px rgba(5, 150, 105, 0.3);
+}
+
+.action-btn.new-round-btn:hover:not(:disabled) {
+    box-shadow: 0 0 30px rgba(5, 150, 105, 0.5);
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   RESULT OVERLAY
+   ======================================== */
+.result-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.result-modal {
+    background: linear-gradient(145deg, rgba(26, 26, 26, 0.98) 0%, rgba(10, 10, 10, 0.99) 100%);
+    border-radius: 24px;
+    padding: 32px 48px;
+    text-align: center;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.6);
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.result-winner {
+    font-size: 36px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+}
+
+.result-winner.player {
+    color: #60a5fa;
+    text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+}
+
+.result-winner.banker {
+    color: #f87171;
+    text-shadow: 0 0 20px rgba(248, 113, 113, 0.5);
+}
+
+.result-winner.tie {
+    color: #34d399;
+    text-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
+}
+
+.result-scores {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 24px 0;
+}
+
+.result-score {
+    text-align: center;
+}
+
+.result-score-label {
+    font-size: 14px;
+    color: #7a8599;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.result-score-value {
+    font-size: 48px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.result-profit {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 16px 0 24px;
+}
+
+.result-profit.win {
+    color: #00ff88;
+}
+
+.result-profit.loss {
+    color: #ff4757;
+}
+
+.result-profit.push {
+    color: #d4af37;
+}
+
+/* ========================================
+   BALANCE DISPLAY
+   ======================================== */
+.baccarat-balance {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 8px;
+}
+
+.balance-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.balance-label {
+    font-size: 12px;
+    color: #7a8599;
+    text-transform: uppercase;
+}
+
+.balance-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #d4af37;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablet */
+@media (max-width: 768px) {
+    .baccarat-wrapper {
+        padding: 12px;
+    }
+
+    .baccarat-table {
+        padding: 16px;
+    }
+
+    .bet-zone {
+        padding: 16px 12px;
+        min-height: 140px;
+    }
+
+    .zone-label {
+        font-size: 16px;
+    }
+
+    .baccarat-card {
+        width: 42px;
+        height: 60px;
+    }
+
+    .baccarat-card .card-rank {
+        font-size: 14px;
+    }
+
+    .baccarat-card .card-suit {
+        font-size: 16px;
+    }
+
+    .chip {
+        width: 48px;
+        height: 48px;
+        font-size: 11px;
+    }
+
+    .action-btn {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+
+    .score-bubble {
+        width: 50px;
+        height: 50px;
+        font-size: 26px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .baccarat-wrapper {
+        padding: 8px;
+        min-height: 100dvh;
+    }
+
+    .baccarat-container {
+        gap: 12px;
+    }
+
+    .baccarat-scoreboard {
+        padding: 0 8px;
+    }
+
+    .score-bubble {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+
+    .baccarat-table {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .baccarat-betting-area {
+        flex-direction: row;
+        gap: 6px;
+    }
+
+    .bet-zone {
+        min-height: 120px;
+        padding: 12px 8px;
+        border-radius: 12px;
+    }
+
+    .bet-zone.tie-zone {
+        border-radius: 30% 30% 12px 12px;
+    }
+
+    .zone-label {
+        font-size: 12px;
+        letter-spacing: 1px;
+    }
+
+    .zone-odds {
+        font-size: 11px;
+    }
+
+    .zone-cards {
+        margin: 16px 0 8px;
+        min-height: 55px;
+        gap: 4px;
+    }
+
+    .baccarat-card {
+        width: 36px;
+        height: 52px;
+    }
+
+    .baccarat-card .card-rank {
+        font-size: 12px;
+    }
+
+    .baccarat-card .card-suit {
+        font-size: 14px;
+    }
+
+    .card-placeholder {
+        width: 36px;
+        height: 52px;
+    }
+
+    .baccarat-controls {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .chip-selector {
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .chip {
+        width: 42px;
+        height: 42px;
+        font-size: 10px;
+    }
+
+    .action-buttons {
+        gap: 8px;
+    }
+
+    .action-btn {
+        padding: 10px 16px;
+        font-size: 12px;
+        border-radius: 10px;
+    }
+
+    .action-btn.deal-btn {
+        min-width: 100px;
+    }
+
+    .result-modal {
+        padding: 24px;
+        margin: 16px;
+        border-radius: 16px;
+    }
+
+    .result-winner {
+        font-size: 24px;
+    }
+
+    .result-scores {
+        gap: 24px;
+    }
+
+    .result-score-value {
+        font-size: 36px;
+    }
+
+    .result-profit {
+        font-size: 22px;
+    }
+
+    .bet-percentage {
+        width: 28px;
+        height: 28px;
+        font-size: 9px;
+    }
+
+    .zone-bet-info {
+        top: 4px;
+    }
+
+    .zone-bet-amount {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .balance-item {
+        padding: 6px 12px;
+    }
+
+    .balance-value {
+        font-size: 16px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .baccarat-wrapper {
+        padding: 8px;
+    }
+
+    .baccarat-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        max-width: 100%;
+    }
+
+    .baccarat-scoreboard {
+        width: 100%;
+        order: 1;
+    }
+
+    .baccarat-table {
+        flex: 1;
+        order: 2;
+        min-width: 50%;
+    }
+
+    .baccarat-controls {
+        flex: 1;
+        order: 3;
+        min-width: 40%;
+    }
+
+    .bet-zone {
+        min-height: 100px;
+    }
+
+    .zone-cards {
+        min-height: 50px;
+        margin: 12px 0 6px;
+    }
+
+    .baccarat-card {
+        width: 32px;
+        height: 46px;
+    }
+
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+}
+
+/* Loading spinner */
+.baccarat-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Winner highlight on zones */
+.bet-zone.winner {
+    animation: winnerPulse 0.6s ease infinite alternate;
+}
+
+@keyframes winnerPulse {
+    from {
+        box-shadow: 0 0 30px currentColor;
+    }
+
+    to {
+        box-shadow: 0 0 50px currentColor, 0 0 80px currentColor;
+    }
+}
+
+.bet-zone.player-zone.winner {
+    color: #60a5fa;
+}
+
+.bet-zone.banker-zone.winner {
+    color: #f87171;
+}
+
+.bet-zone.tie-zone.winner {
+    color: #34d399;
+}
