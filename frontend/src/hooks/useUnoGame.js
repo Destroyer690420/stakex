@@ -249,7 +249,7 @@ const useUnoGame = (roomId) => {
                 autoDrawTimeoutRef.current = null;
             }
         };
-    }, [currentTurnIndex, room?.status, isMyTurn, isHost]);
+    }, [currentTurnIndex, room?.status, isMyTurn, isHost, drawCardInternal, forceDrawForCurrentPlayer]);
 
     // ========================================
     // GAME ACTIONS
