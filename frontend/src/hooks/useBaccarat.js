@@ -40,8 +40,8 @@ export default function useBaccarat() {
     const [selectedChip, setSelectedChip] = useState(10);
 
     // Card state
-    const [playerCards, setPlayerCards] = useState([]);
-    const [bankerCards, setBankerCards] = useState([]);
+    const [, setPlayerCards] = useState([]);
+    const [, setBankerCards] = useState([]);
     const [playerScore, setPlayerScore] = useState(0);
     const [bankerScore, setBankerScore] = useState(0);
 

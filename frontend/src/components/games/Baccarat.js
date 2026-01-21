@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import useBaccarat from '../../hooks/useBaccarat';
-import { getCardDisplay, getCardColor } from '../../lib/baccaratEngine';
+import { getCardColor } from '../../lib/baccaratEngine';
 import './Baccarat.css';
 
 /**
@@ -56,7 +56,7 @@ const Baccarat = () => {
     const renderCard = (card, index) => {
         if (!card) return null;
         const color = getCardColor(card);
-        const display = getCardDisplay(card);
+
 
         return (
             <div
@@ -280,7 +280,7 @@ const Baccarat = () => {
                             </div>
 
                             <div className={`result-profit ${roundResult.totalProfit > 0 ? 'win' :
-                                    roundResult.totalProfit < 0 ? 'loss' : 'push'
+                                roundResult.totalProfit < 0 ? 'loss' : 'push'
                                 }`}>
                                 {roundResult.totalProfit > 0 && `+$${roundResult.totalProfit.toFixed(2)}`}
                                 {roundResult.totalProfit < 0 && `-$${Math.abs(roundResult.totalProfit).toFixed(2)}`}
