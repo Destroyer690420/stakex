@@ -177,6 +177,55 @@ const useUnoGame = (roomId) => {
     }, [roomId, navigate, user?.id, refreshUser]);
 
     // ========================================
+    // AUTO-DRAW FUNCTIONS (defined before timer useEffect)
+    // ========================================
+
+    // Internal draw card (for auto-draw, doesn't check isMyTurn again)
+    const drawCardInternal = useCallback(async () => {
+        if (!roomId || !user?.id) return { success: false };
+
+        try {
+            const { data, error: rpcError } = await supabase.rpc('fn_draw_card', {
+                p_user_id: user.id,
+                p_room_id: roomId
+            });
+
+            if (rpcError) throw rpcError;
+            if (!data.success) throw new Error(data.error);
+
+            return { success: true, data };
+        } catch (err) {
+            console.error('[UNO] Draw failed:', err);
+            return { success: false, error: err.message };
+        }
+    }, [roomId, user?.id]);
+
+    // Host force draw for stalled player (still uses the current player's ID from room)
+    const forceDrawForCurrentPlayer = useCallback(async () => {
+        if (!roomId || !room?.players) return { success: false };
+
+        const currentPlayer = room?.players?.[room?.current_turn_index];
+        if (!currentPlayer) return { success: false };
+
+        try {
+            // Host calls draw on behalf of stalled player
+            const { data, error: rpcError } = await supabase.rpc('fn_draw_card', {
+                p_user_id: currentPlayer.user_id,
+                p_room_id: roomId
+            });
+
+            if (rpcError) throw rpcError;
+            if (!data.success) throw new Error(data.error);
+
+            console.log('[UNO] Host forced draw for:', currentPlayer.username);
+            return { success: true, data };
+        } catch (err) {
+            console.error('[UNO] Host force draw failed:', err);
+            return { success: false, error: err.message };
+        }
+    }, [roomId, room?.players, room?.current_turn_index]);
+
+    // ========================================
     // TIMER - Resets on current_turn_index change
     // ========================================
     useEffect(() => {
@@ -419,51 +468,6 @@ const useUnoGame = (roomId) => {
             setIsSending(false);
         }
     }, [roomId, user?.id, isMyTurn, isSending, refreshUser]);
-
-    // Internal draw card (for auto-draw, doesn't check isMyTurn again)
-    const drawCardInternal = useCallback(async () => {
-        if (!roomId || !user?.id) return { success: false };
-
-        try {
-            const { data, error: rpcError } = await supabase.rpc('fn_draw_card', {
-                p_user_id: user.id,
-                p_room_id: roomId
-            });
-
-            if (rpcError) throw rpcError;
-            if (!data.success) throw new Error(data.error);
-
-            return { success: true, data };
-        } catch (err) {
-            console.error('[UNO] Draw failed:', err);
-            return { success: false, error: err.message };
-        }
-    }, [roomId, user?.id]);
-
-    // Host force draw for stalled player (still uses the current player's ID from room)
-    const forceDrawForCurrentPlayer = useCallback(async () => {
-        if (!roomId || !room?.players) return { success: false };
-
-        const currentPlayer = room.players[room.current_turn_index];
-        if (!currentPlayer) return { success: false };
-
-        try {
-            // Host calls draw on behalf of stalled player
-            const { data, error: rpcError } = await supabase.rpc('fn_draw_card', {
-                p_user_id: currentPlayer.user_id,
-                p_room_id: roomId
-            });
-
-            if (rpcError) throw rpcError;
-            if (!data.success) throw new Error(data.error);
-
-            console.log('[UNO] Host forced draw for:', currentPlayer.username);
-            return { success: true, data };
-        } catch (err) {
-            console.error('[UNO] Host force draw failed:', err);
-            return { success: false, error: err.message };
-        }
-    }, [roomId, room?.players, room?.current_turn_index]);
 
     const drawCard = useCallback(async () => {
         // Safety check
