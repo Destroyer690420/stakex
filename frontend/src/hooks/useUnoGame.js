@@ -226,10 +226,40 @@ const useUnoGame = (roomId) => {
     }, [roomId, room?.players, room?.current_turn_index]);
 
     // ========================================
-    // TIMER - Resets on current_turn_index change
+    // TIMER - Only resets on actual turn changes
     // ========================================
+    const turnSessionRef = useRef(0);
+
     useEffect(() => {
-        // Clear existing timers
+        // Only run during active game
+        if (room?.status !== 'playing') {
+            // Clear timers when not playing
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+            if (autoDrawTimeoutRef.current) {
+                clearTimeout(autoDrawTimeoutRef.current);
+                autoDrawTimeoutRef.current = null;
+            }
+            setTurnTimeLeft(TURN_DURATION);
+            return;
+        }
+
+        // Check if turn actually changed
+        const turnActuallyChanged = lastTurnIndexRef.current !== currentTurnIndex;
+
+        // If turn didn't change, don't reset anything - just return
+        if (!turnActuallyChanged) {
+            return;
+        }
+
+        // Turn changed - update tracking refs
+        lastTurnIndexRef.current = currentTurnIndex;
+        turnSessionRef.current += 1;
+        const currentSession = turnSessionRef.current;
+
+        // Clear previous timers
         if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
@@ -239,22 +269,11 @@ const useUnoGame = (roomId) => {
             autoDrawTimeoutRef.current = null;
         }
 
-        // Only run during active game
-        if (room?.status !== 'playing') {
-            setTurnTimeLeft(TURN_DURATION);
-            return;
-        }
+        // Reset state for new turn
+        setTurnTimeLeft(TURN_DURATION);
+        autoDrawnRef.current = false;
 
-        // Detect turn change
-        const turnChanged = lastTurnIndexRef.current !== currentTurnIndex;
-        lastTurnIndexRef.current = currentTurnIndex;
-
-        if (turnChanged) {
-            console.log('[UNO] Turn changed to:', currentTurnIndex, 'isMyTurn:', isMyTurn, 'isHost:', isHost);
-            // Reset timer on turn change
-            setTurnTimeLeft(TURN_DURATION);
-            autoDrawnRef.current = false;
-        }
+        console.log('[UNO] Turn changed to:', currentTurnIndex, 'isMyTurn:', isMyTurn, 'isHost:', isHost, 'session:', currentSession);
 
         // Start countdown timer
         timerRef.current = setInterval(() => {
@@ -266,26 +285,39 @@ const useUnoGame = (roomId) => {
             });
         }, 1000);
 
-        // Set up auto-draw timeout (host authority after 20s)
-        // If it's my turn, I auto-draw for myself
-        // If it's not my turn but I'm host, I auto-draw for the stalled player after 20s
-        if (isMyTurn && !autoDrawnRef.current) {
+        // Set up auto-draw timeout ONLY on turn change
+        // Capture values for the closure
+        const capturedMySeatIndex = mySeatIndex;
+        const capturedIsHost = room?.host_id === user?.id;
+        const isCurrentPlayerMe = capturedMySeatIndex === currentTurnIndex;
+
+        if (isCurrentPlayerMe && !autoDrawnRef.current) {
+            // My turn - I handle my own auto-draw
             autoDrawTimeoutRef.current = setTimeout(() => {
+                // Session check to ensure this timeout is still valid
+                if (currentSession !== turnSessionRef.current) {
+                    console.log('[UNO] Ignoring stale auto-draw (session changed from', currentSession, 'to', turnSessionRef.current, ')');
+                    return;
+                }
                 if (!autoDrawnRef.current) {
                     autoDrawnRef.current = true;
-                    console.log('[UNO] Auto-draw triggered (my turn timeout)');
+                    console.log('[UNO] Auto-draw triggered for my turn, session:', currentSession);
                     drawCardInternal().catch(console.error);
                 }
             }, (AUTO_DRAW_TIMEOUT * 1000));
-        } else if (isHost && !isMyTurn && !autoDrawnRef.current) {
-            // Host auto-draw fallback for stalled players
+        } else if (capturedIsHost && !isCurrentPlayerMe && !autoDrawnRef.current) {
+            // I'm host but not my turn - fallback auto-draw for stalled players
             autoDrawTimeoutRef.current = setTimeout(() => {
+                if (currentSession !== turnSessionRef.current) {
+                    console.log('[UNO] Ignoring stale host auto-draw (session changed from', currentSession, 'to', turnSessionRef.current, ')');
+                    return;
+                }
                 if (!autoDrawnRef.current) {
                     autoDrawnRef.current = true;
-                    console.log('[UNO] Host forcing auto-draw for stalled player');
+                    console.log('[UNO] Host forcing auto-draw, session:', currentSession);
                     forceDrawForCurrentPlayer().catch(console.error);
                 }
-            }, ((AUTO_DRAW_TIMEOUT + 5) * 1000)); // Host waits extra 5s
+            }, ((AUTO_DRAW_TIMEOUT + 5) * 1000));
         }
 
         return () => {
