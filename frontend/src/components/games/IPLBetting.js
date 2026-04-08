@@ -37,8 +37,6 @@ const IPLBetting = () => {
     const [upcoming, setUpcoming] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Previous odds for flash animation
-    const prevOddsRef = useRef({ team1: 0, team2: 0 });
     const [oddsFlash, setOddsFlash] = useState({ team1: false, team2: false });
 
     // Betting state
