@@ -15,6 +15,7 @@ const gameRoutes = require('./routes/games');
 const rouletteRoutes = require('./routes/roulette');
 const minesRoutes = require('./routes/mines');
 const towerRoutes = require('./routes/tower');
+const iplRoutes = require('./routes/ipl');
 
 const app = express();
 const server = http.createServer(app);
@@ -91,6 +92,7 @@ app.use('/api/games', gameRoutes);
 app.use('/api/games/roulette', rouletteRoutes);
 app.use('/api/games/mines', minesRoutes);
 app.use('/api/games/tower', towerRoutes);
+app.use('/api/bet', iplRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -130,6 +132,7 @@ app.use((err, req, res, next) => {
 require('./socket/poker')(io);
 require('./socket/coinflip')(io);
 require('./socket/crashLoop')(io);
+require('./socket/iplLive')(io);
 // UNO game logic moved to Supabase SQL (uno_split_state.sql)
 
 const PORT = process.env.PORT || 5000;

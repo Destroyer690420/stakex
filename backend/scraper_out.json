@@ -1,0 +1,48 @@
+{
+  "live": [],
+  "completed": [
+    {
+      "id": "cb_149746",
+      "cricbuzzId": "149746",
+      "team1": "DC",
+      "team2": "GT",
+      "team1Name": "Delhi Capitals",
+      "team2Name": "Gujarat Titans",
+      "team1Score": 209,
+      "team1Wickets": 8,
+      "team1Overs": 20,
+      "team2Score": 210,
+      "team2Wickets": 4,
+      "team2Overs": 0,
+      "innings": 2,
+      "target": 211,
+      "chasingTeam": 2,
+      "t1WinProb": 0,
+      "t2WinProb": 0,
+      "status": "completed",
+      "statusText": "Follow IPL | DC 209/8 (20) vs GT\n                210/4 (David Miller 41(20) ) | ",
+      "is_betting_open": false,
+      "venue": "Arun Jaitley Stadium, Delhi",
+      "winner": null,
+      "date": "2026-04-08T18:14:20.389Z",
+      "team1Odds": 2.15,
+      "team2Odds": 1.75
+    }
+  ],
+  "upcoming": [
+    {
+      "id": "cb_149757",
+      "cricbuzzId": "149757",
+      "matchNumber": 15,
+      "team1": "KKR",
+      "team2": "LSG",
+      "team1Name": "Kolkata Knight Riders",
+      "team2Name": "Lucknow Super Giants",
+      "status": "upcoming",
+      "statusText": "KKR vs LSG - Preview",
+      "date": "2026-04-09T14:00:00.000Z",
+      "venue": ""
+    }
+  ],
+  "demoMode": false
+}

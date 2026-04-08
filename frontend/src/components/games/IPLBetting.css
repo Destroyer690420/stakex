@@ -1,0 +1,631 @@
+/* ============================================
+   IPL BETTING – StakeX
+   Premium dark+gold theme
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ===== Page wrapper ===== */
+.ipl-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%);
+    padding: 20px;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+}
+
+.ipl-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ipl-page-header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #d4af37, #f0d78c, #d4af37);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.ipl-demo-badge {
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    color: #d4af37;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ===== Live badge (pulsing) ===== */
+.ipl-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 255, 136, 0.12);
+    border: 1px solid rgba(0, 255, 136, 0.35);
+    color: #00ff88;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.ipl-live-dot {
+    width: 8px;
+    height: 8px;
+    background: #00ff88;
+    border-radius: 50%;
+    animation: iplPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes iplPulse {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0.5); }
+    50%      { opacity: 0.6; transform: scale(1.3); box-shadow: 0 0 12px 4px rgba(0,255,136,0.25); }
+}
+
+/* ===== Main grid ===== */
+.ipl-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ===== Match Card (Main betting area) ===== */
+.ipl-match-card {
+    background: linear-gradient(145deg, rgba(26,26,26,0.95) 0%, rgba(10,10,10,0.98) 100%);
+    border: 1px solid rgba(212,175,55,0.15);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.ipl-match-card::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(212,175,55,0.06) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.match-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.match-title {
+    font-size: 13px;
+    color: #7a8599;
+    font-weight: 500;
+}
+
+.match-status-text {
+    font-size: 12px;
+    color: #d4af37;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 0;
+    min-height: 20px;
+}
+
+/* ===== Teams display ===== */
+.teams-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    margin: 20px 0;
+}
+
+.team-block {
+    flex: 1;
+    text-align: center;
+    cursor: pointer;
+    padding: 16px 12px;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.team-block:hover {
+    background: rgba(212,175,55,0.05);
+    border-color: rgba(212,175,55,0.2);
+}
+
+.team-block.selected {
+    background: rgba(212,175,55,0.08);
+    border-color: rgba(212,175,55,0.5);
+    box-shadow: 0 0 20px rgba(212,175,55,0.1);
+}
+
+.team-block.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.team-logo-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    border: 2px solid rgba(255,255,255,0.15);
+    overflow: hidden;
+}
+
+.team-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.team-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.team-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #d4af37;
+    margin-bottom: 2px;
+}
+
+.team-overs {
+    font-size: 12px;
+    color: #7a8599;
+}
+
+.team-odds {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    transition: all 0.4s ease;
+    box-shadow: 0 2px 10px rgba(212,175,55,0.3);
+}
+
+.team-odds.flash {
+    animation: oddsFlash 0.5s ease;
+}
+
+@keyframes oddsFlash {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.15); box-shadow: 0 0 20px rgba(212,175,55,0.6); }
+    100% { transform: scale(1); }
+}
+
+.vs-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #555;
+    flex-shrink: 0;
+}
+
+/* ===== Bet form ===== */
+.bet-form {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Premium Bet Input Styling */
+.premium-bet-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(20,20,25,0.9), rgba(10,10,15,0.9));
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.5), 0 0 0 0 rgba(212,175,55,0);
+}
+
+.premium-bet-input-container:focus-within {
+    border-color: rgba(212,175,55,0.8);
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.5), 0 0 20px rgba(212,175,55,0.2);
+    transform: translateY(-1px);
+}
+
+.premium-input-icon {
+    padding: 0 16px 0 24px;
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: #d4af37;
+    pointer-events: none;
+}
+
+.premium-bet-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 20px 0;
+    outline: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.premium-bet-input::-webkit-outer-spin-button,
+.premium-bet-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.premium-bet-input::placeholder {
+    color: rgba(255,255,255,0.15);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.premium-input-currency {
+    padding: 0 24px 0 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.4);
+    pointer-events: none;
+    border-left: 1px solid rgba(255,255,255,0.08);
+}
+
+.potential-payout {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.potential-payout .label {
+    font-size: 13px;
+    color: #7a8599;
+}
+
+.potential-payout .value {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: #00ff88;
+}
+
+.place-bet-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #d4af37 0%, #8b7355 100%);
+    color: #000;
+    box-shadow: 0 4px 20px rgba(212,175,55,0.3);
+}
+
+.place-bet-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(212,175,55,0.4);
+}
+
+.place-bet-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.place-bet-btn.closed {
+    background: linear-gradient(135deg, #333 0%, #222 100%);
+    color: #ff4757;
+    box-shadow: none;
+}
+
+/* ===== Sidebar panels ===== */
+.ipl-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ipl-panel {
+    background: linear-gradient(145deg, rgba(26,26,26,0.95) 0%, rgba(10,10,10,0.98) 100%);
+    border: 1px solid rgba(212,175,55,0.12);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.ipl-panel h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #d4af37;
+    margin: 0 0 14px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Active bets list */
+.active-bet-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border-left: 3px solid #d4af37;
+}
+
+.active-bet-team {
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+}
+
+.active-bet-details {
+    font-size: 12px;
+    color: #7a8599;
+    margin-top: 2px;
+}
+
+.active-bet-payout {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #00ff88;
+}
+
+.settled-won { border-left-color: #00ff88; }
+.settled-lost { border-left-color: #ff4757; }
+.settled-won .active-bet-payout { color: #00ff88; }
+.settled-lost .active-bet-payout { color: #ff4757; }
+
+.no-bets-msg {
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    padding: 16px 0;
+}
+
+/* ===== Upcoming matches list ===== */
+.upcoming-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.upcoming-item:last-child { border-bottom: none; }
+
+.upcoming-teams {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.upcoming-date {
+    font-size: 11px;
+    color: #7a8599;
+    text-align: right;
+}
+
+/* ===== No match state ===== */
+.ipl-no-match {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.ipl-no-match .emoji {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.ipl-no-match h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.ipl-no-match p {
+    color: #7a8599;
+    font-size: 14px;
+}
+
+/* ===== Dashboard mini card ===== */
+.ipl-dashboard-card {
+    background: linear-gradient(145deg, rgba(26,26,26,0.95) 0%, rgba(10,10,10,0.98) 100%);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 32px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: block;
+}
+
+.ipl-dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    left: -60px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(0,255,136,0.04) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.ipl-dashboard-card:hover {
+    border-color: rgba(212,175,55,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.ipl-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.ipl-card-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #d4af37;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ipl-card-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.ipl-card-team {
+    text-align: center;
+}
+
+.ipl-card-team-code {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+}
+
+.ipl-card-team-odds {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+    background: linear-gradient(135deg, #d4af37, #8b7355);
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-top: 6px;
+    display: inline-block;
+}
+
+.ipl-card-vs {
+    color: #555;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.ipl-card-score {
+    text-align: center;
+    font-size: 12px;
+    color: #7a8599;
+    margin-top: 8px;
+}
+
+.ipl-card-cta {
+    text-align: center;
+    margin-top: 14px;
+    color: #d4af37;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ===== Toast / settlement flash ===== */
+.ipl-settlement-toast {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0,0,0,0.95);
+    border: 1px solid rgba(0,255,136,0.4);
+    border-radius: 14px;
+    padding: 16px 24px;
+    z-index: 10000;
+    animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .ipl-grid {
+        grid-template-columns: 1fr;
+    }
+    .ipl-sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .ipl-sidebar .ipl-panel {
+        flex: 1;
+        min-width: 260px;
+    }
+}
+
+@media (max-width: 600px) {
+    .ipl-page { padding: 12px; }
+    .ipl-match-card { padding: 18px; border-radius: 14px; }
+    .teams-display { gap: 12px; }
+    .team-block { padding: 12px 8px; }
+    .team-logo-circle { width: 48px; height: 48px; font-size: 18px; }
+    .team-name { font-size: 14px; }
+    .team-score { font-size: 16px; }
+    .team-odds { font-size: 14px; padding: 5px 12px; }
+    .vs-badge { font-size: 14px; }
+    .ipl-page-header h1 { font-size: 22px; }
+    .quick-amounts { gap: 6px; }
+    .quick-btn { padding: 6px 12px; font-size: 12px; }
+    .ipl-sidebar { flex-direction: column; }
+}

@@ -1,6 +1,7 @@
-import React, { useContext, useState, useRef } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { io } from 'socket.io-client';
 import './Dashboard.css';
 
 // ============================================
@@ -100,6 +101,17 @@ const games = [
         image: '/images/poker.png',
         emoji: '🃏',
         category: 'table'
+    },
+    // Sports Betting
+    {
+        id: 'ipl',
+        name: 'IPL Betting',
+        path: '/games/ipl',
+        image: '/images/ipl.png',
+        emoji: '🏏',
+        category: 'sports',
+        featured: true,
+        new: true
     }
 ];
 
@@ -140,6 +152,19 @@ const categories = [
             </svg>
         ),
         subtitle: 'Classic casino experience'
+    },
+    {
+        id: 'sports',
+        name: 'Sports Betting',
+        icon: (
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+                <path d="M12 2C12 2 8 6 8 12C8 18 12 22 12 22" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                <path d="M12 2C12 2 16 6 16 12C16 18 12 22 12 22" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+        ),
+        subtitle: 'Live sports action'
     }
 ];
 
@@ -235,9 +260,35 @@ const GameRow = ({ category, games }) => {
     );
 };
 
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+
+// IPL team colors
+const TEAM_COLORS = {
+    MI: '#004BA0', CSK: '#FDB913', RCB: '#EC1C24', KKR: '#3B215D',
+    SRH: '#FF822A', DC: '#17479E', PBKS: '#ED1B24', RR: '#EA1A85',
+    LSG: '#A72056', GT: '#1B2133'
+};
+
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
+    const [iplMatch, setIplMatch] = useState(null);
 
+    // Listen for IPL live data
+    useEffect(() => {
+        const socket = io(SOCKET_URL, {
+            transports: ['websocket'],
+            upgrade: false
+        });
+        socket.emit('join_ipl');
+        socket.on('ipl-update', (data) => {
+            const live = data.live?.[0] || null;
+            setIplMatch(live);
+        });
+        return () => {
+            socket.emit('leave_ipl');
+            socket.disconnect();
+        };
+    }, []);
     // Get games for each category
     const getGamesByCategory = (categoryId) => {
         return games.filter(g => g.category === categoryId);
@@ -268,6 +319,44 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* IPL Live Banner */}
+            {iplMatch && (
+                <Link to="/games/ipl" className="ipl-dashboard-card">
+                    <div className="ipl-card-header">
+                        <span className="ipl-card-title">🏏 IPL Live</span>
+                        <span className="ipl-live-badge" style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.35)',
+                            color: '#00ff88', padding: '4px 12px', borderRadius: 20,
+                            fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase'
+                        }}>
+                            <span style={{
+                                width: 8, height: 8, background: '#00ff88',
+                                borderRadius: '50%', animation: 'iplPulse 1.4s ease-in-out infinite'
+                            }} />
+                            LIVE
+                        </span>
+                    </div>
+                    <div className="ipl-card-teams">
+                        <div className="ipl-card-team">
+                            <div className="ipl-card-team-code" style={{ color: TEAM_COLORS[iplMatch.team1] || '#fff' }}>
+                                {iplMatch.team1}
+                            </div>
+                            <div className="ipl-card-team-odds">×{iplMatch.team1Odds?.toFixed(2)}</div>
+                        </div>
+                        <span className="ipl-card-vs">VS</span>
+                        <div className="ipl-card-team">
+                            <div className="ipl-card-team-code" style={{ color: TEAM_COLORS[iplMatch.team2] || '#fff' }}>
+                                {iplMatch.team2}
+                            </div>
+                            <div className="ipl-card-team-odds">×{iplMatch.team2Odds?.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div className="ipl-card-score">{iplMatch.statusText}</div>
+                    <div className="ipl-card-cta">Tap to place bet →</div>
+                </Link>
+            )}
 
             {/* Game Categories - Each with horizontal scroll */}
             {categories.map(category => (

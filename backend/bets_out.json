@@ -1,0 +1,28 @@
+[
+  {
+    "id": "8669cdb8-4939-491b-a2a3-87fa124226c8",
+    "user_id": "bfedf73d-b13d-4f8e-9187-37d993cacd8c",
+    "match_id": "cb_149746",
+    "match_title": "Delhi Capitals vs Gujarat Titans",
+    "selected_team": "GT",
+    "bet_amount": 1000,
+    "odds_at_placement": 1.75,
+    "potential_payout": 1750,
+    "status": "won",
+    "settled_at": "2026-04-08T18:16:22.531141+00:00",
+    "created_at": "2026-04-08T17:37:05.869336+00:00"
+  },
+  {
+    "id": "a7ab7166-6a78-4a9f-8cd2-5bf25dfb916c",
+    "user_id": "bfedf73d-b13d-4f8e-9187-37d993cacd8c",
+    "match_id": "cb_149746",
+    "match_title": "Delhi Capitals vs Gujarat Titans",
+    "selected_team": "DC",
+    "bet_amount": 1000,
+    "odds_at_placement": 2.64,
+    "potential_payout": 2640,
+    "status": "lost",
+    "settled_at": "2026-04-08T18:16:22.718668+00:00",
+    "created_at": "2026-04-08T17:52:03.176184+00:00"
+  }
+]

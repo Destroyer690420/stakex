@@ -20,6 +20,7 @@ import DiceGame from './components/games/DiceGame';
 import UnoLobby from './components/games/UnoLobby';
 import UnoGame from './components/games/UnoGame';
 import Baccarat from './components/games/Baccarat';
+import IPLBetting from './components/games/IPLBetting';
 import Profile from './pages/Profile';
 import Friends from './pages/Friends';
 import Leaderboard from './pages/Leaderboard';
@@ -143,6 +144,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Baccarat />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/games/ipl"
+                element={
+                  <PrivateRoute>
+                    <IPLBetting />
                   </PrivateRoute>
                 }
               />

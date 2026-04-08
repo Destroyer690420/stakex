@@ -1,0 +1,70 @@
+{
+  "live": [
+    {
+      "id": "cb_149746",
+      "cricbuzzId": "149746",
+      "team1": "DC",
+      "team2": "GT",
+      "team1Name": "Delhi Capitals",
+      "team2Name": "Gujarat Titans",
+      "team1Score": 210,
+      "team1Wickets": 4,
+      "team1Overs": 0,
+      "team2Score": 153,
+      "team2Wickets": 4,
+      "team2Overs": 15.3,
+      "innings": 2,
+      "target": 211,
+      "status": "live",
+      "statusText": "Follow IPL | DC 153/4 (15.3) vs GT\n                210/4 (KL Rahul 82(45) Trista",
+      "is_betting_open": true,
+      "venue": "Arun Jaitley Stadium, Delhi",
+      "winner": null,
+      "date": "2026-04-08T17:28:50.496Z",
+      "team1Odds": 1.28,
+      "team2Odds": 2.62
+    }
+  ],
+  "completed": [
+    {
+      "id": "cb_149743",
+      "cricbuzzId": "149743",
+      "team1": "MI",
+      "team2": "RR",
+      "team1Name": "Mumbai Indians",
+      "team2Name": "Rajasthan Royals",
+      "team1Score": 150,
+      "team1Wickets": 3,
+      "team1Overs": 0,
+      "team2Score": 123,
+      "team2Wickets": 9,
+      "team2Overs": 11,
+      "innings": 2,
+      "target": 151,
+      "status": "live",
+      "statusText": "Follow IPL | MI 123/9 (11) vs RR\n                150/3 (Deepak Chahar 6(5) Jaspr",
+      "is_betting_open": true,
+      "venue": "Barsapara Cricket Stadium, Guwahati",
+      "winner": null,
+      "date": "2026-04-08T17:28:50.662Z",
+      "team1Odds": 3.11,
+      "team2Odds": 1.2
+    }
+  ],
+  "upcoming": [
+    {
+      "id": "cb_149757",
+      "cricbuzzId": "149757",
+      "matchNumber": 15,
+      "team1": "KKR",
+      "team2": "LSG",
+      "team1Name": "Kolkata Knight Riders",
+      "team2Name": "Lucknow Super Giants",
+      "status": "upcoming",
+      "statusText": "KKR vs LSG - Preview",
+      "date": "2026-04-08T17:28:50.301Z",
+      "venue": ""
+    }
+  ],
+  "demoMode": false
+}
