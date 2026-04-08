@@ -14,18 +14,36 @@ const TEAM_COLORS = {
     LSG: '#A72056', GT: '#1B2133'
 };
 
-// IPL team logos
+// IPL team logos (High quality PNGs)
 const TEAM_LOGOS = {
-    CSK: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171030/chennai-super-kings.jpg',
-    DC: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171031/delhi-capitals.jpg',
-    KKR: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171032/kolkata-knight-riders.jpg',
-    MI: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171033/mumbai-indians.jpg',
-    PBKS: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171034/punjab-kings.jpg',
-    RR: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171035/rajasthan-royals.jpg',
-    RCB: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171036/royal-challengers-bangalore.jpg',
-    SRH: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c171037/sunrisers-hyderabad.jpg',
-    LSG: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c228220/lucknow-super-giants.jpg',
-    GT: 'https://static.cricbuzz.com/a/img/v1/152x152/i1/c228222/gujarat-titans.jpg'
+    CSK: 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/Chennai_Super_Kings_Logo.svg/192px-Chennai_Super_Kings_Logo.svg.png',
+    DC: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Delhi_Capitals_Logo.svg/192px-Delhi_Capitals_Logo.svg.png',
+    KKR: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Kolkata_Knight_Riders_Logo.svg/192px-Kolkata_Knight_Riders_Logo.svg.png',
+    MI: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/Mumbai_Indians_Logo.svg/192px-Mumbai_Indians_Logo.svg.png',
+    PBKS: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/Punjab_Kings_Logo.svg/192px-Punjab_Kings_Logo.svg.png',
+    RR: 'https://upload.wikimedia.org/wikipedia/en/thumb/1/10/Rajasthan_Royals_Logo.svg/192px-Rajasthan_Royals_Logo.svg.png',
+    RCB: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d2/Royal_Challengers_Bangalore_Logo.svg/192px-Royal_Challengers_Bangalore_Logo.svg.png',
+    SRH: 'https://upload.wikimedia.org/wikipedia/en/thumb/8/81/Sunrisers_Hyderabad_Logo.svg/192px-Sunrisers_Hyderabad_Logo.svg.png',
+    LSG: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d2/Lucknow_Super_Giants_Logo.svg/192px-Lucknow_Super_Giants_Logo.svg.png',
+    GT: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/09/Gujarat_Titans_Logo.svg/192px-Gujarat_Titans_Logo.svg.png'
+};
+
+const TeamLogo = ({ teamCode }) => {
+    const [error, setError] = useState(false);
+    const logoUrl = TEAM_LOGOS[teamCode];
+
+    if (!logoUrl || error) {
+        return <span className="team-initials">{teamCode}</span>;
+    }
+
+    return (
+        <img
+            src={logoUrl}
+            alt={teamCode}
+            className="team-logo-img"
+            onError={() => setError(true)}
+        />
+    );
 };
 
 const IPLBetting = () => {
@@ -319,11 +337,7 @@ const IPLBetting = () => {
                                 className="team-logo-circle"
                                 style={{ background: TEAM_COLORS[matchData.team1] || '#333' }}
                             >
-                                {TEAM_LOGOS[matchData.team1] ? (
-                                    <img src={TEAM_LOGOS[matchData.team1]} alt={matchData.team1} className="team-logo-img" />
-                                ) : (
-                                    matchData.team1
-                                )}
+                                <TeamLogo teamCode={matchData.team1} />
                             </div>
                             <div className="team-name">{matchData.team1Name}</div>
                             <div className="team-score">
@@ -346,11 +360,7 @@ const IPLBetting = () => {
                                 className="team-logo-circle"
                                 style={{ background: TEAM_COLORS[matchData.team2] || '#333' }}
                             >
-                                {TEAM_LOGOS[matchData.team2] ? (
-                                    <img src={TEAM_LOGOS[matchData.team2]} alt={matchData.team2} className="team-logo-img" />
-                                ) : (
-                                    matchData.team2
-                                )}
+                                <TeamLogo teamCode={matchData.team2} />
                             </div>
                             <div className="team-name">{matchData.team2Name}</div>
                             <div className="team-score">
