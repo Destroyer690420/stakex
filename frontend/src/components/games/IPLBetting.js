@@ -245,7 +245,7 @@ const IPLBetting = () => {
                 {upcoming.length > 0 && (
                     <div className="ipl-panel" style={{ maxWidth: 500, margin: '24px auto' }}>
                         <h3>Upcoming Matches</h3>
-                        {upcoming.map(m => (
+                        {upcoming.slice(0, 3).map(m => (
                             <div key={m.id} className="upcoming-item">
                                 <span className="upcoming-teams">
                                     {m.team1} vs {m.team2}
@@ -262,7 +262,7 @@ const IPLBetting = () => {
     // ============================================
     // Main render
     // ============================================
-    const bettingOpen = matchData.is_betting_open && matchData.status === 'live';
+    const bettingOpen = matchData.is_betting_open && (matchData.status === 'live' || matchData.status === 'upcoming');
     const isCompleted = matchData.status === 'completed';
 
     return (
@@ -275,6 +275,15 @@ const IPLBetting = () => {
                         <span className="ipl-live-badge">
                             <span className="ipl-live-dot" />
                             LIVE
+                        </span>
+                    )}
+                    {matchData.status === 'upcoming' && (
+                        <span className="ipl-live-badge" style={{
+                            background: 'rgba(253,185,19,0.12)',
+                            borderColor: 'rgba(253,185,19,0.35)',
+                            color: '#FDB913'
+                        }}>
+                            PRE-MATCH
                         </span>
                     )}
                     {isCompleted && (
@@ -297,7 +306,7 @@ const IPLBetting = () => {
                             {matchData.venue || 'IPL 2026'}
                         </span>
                         <span className="match-title">
-                            {matchData.innings === 2 ? '2nd Innings' : '1st Innings'}
+                            {matchData.status === 'upcoming' ? 'Upcoming Match' : (matchData.innings === 2 ? '2nd Innings' : '1st Innings')}
                         </span>
                     </div>
 
@@ -465,7 +474,7 @@ const IPLBetting = () => {
                     {upcoming.length > 0 && (
                         <div className="ipl-panel">
                             <h3>Upcoming</h3>
-                            {upcoming.slice(0, 5).map(m => (
+                            {upcoming.slice(0, 3).map(m => (
                                 <div key={m.id} className="upcoming-item">
                                     <span className="upcoming-teams">
                                         {m.team1} vs {m.team2}

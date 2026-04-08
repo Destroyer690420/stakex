@@ -13,17 +13,34 @@ const cheerio = require('cheerio');
 // IPL TEAM DATA
 // ============================================
 const IPL_TEAMS = {
-    MI:   { name: 'Mumbai Indians',              short: 'MI',   color: '#004BA0' },
-    CSK:  { name: 'Chennai Super Kings',         short: 'CSK',  color: '#FDB913' },
-    RCB:  { name: 'Royal Challengers Bengaluru', short: 'RCB',  color: '#EC1C24' },
-    KKR:  { name: 'Kolkata Knight Riders',       short: 'KKR',  color: '#3B215D' },
-    SRH:  { name: 'Sunrisers Hyderabad',         short: 'SRH',  color: '#FF822A' },
-    DC:   { name: 'Delhi Capitals',              short: 'DC',   color: '#17479E' },
-    PBKS: { name: 'Punjab Kings',                short: 'PBKS', color: '#ED1B24' },
-    RR:   { name: 'Rajasthan Royals',            short: 'RR',   color: '#EA1A85' },
-    LSG:  { name: 'Lucknow Super Giants',        short: 'LSG',  color: '#A72056' },
-    GT:   { name: 'Gujarat Titans',              short: 'GT',   color: '#1B2133' }
+    MI:   { name: 'Mumbai Indians',              short: 'MI',   color: '#004BA0', elo: 84 },
+    CSK:  { name: 'Chennai Super Kings',         short: 'CSK',  color: '#FDB913', elo: 85 },
+    RCB:  { name: 'Royal Challengers Bengaluru', short: 'RCB',  color: '#EC1C24', elo: 77 },
+    KKR:  { name: 'Kolkata Knight Riders',       short: 'KKR',  color: '#3B215D', elo: 80 },
+    SRH:  { name: 'Sunrisers Hyderabad',         short: 'SRH',  color: '#FF822A', elo: 78 },
+    DC:   { name: 'Delhi Capitals',              short: 'DC',   color: '#17479E', elo: 75 },
+    PBKS: { name: 'Punjab Kings',                short: 'PBKS', color: '#ED1B24', elo: 73 },
+    RR:   { name: 'Rajasthan Royals',            short: 'RR',   color: '#EA1A85', elo: 80 },
+    LSG:  { name: 'Lucknow Super Giants',        short: 'LSG',  color: '#A72056', elo: 82 },
+    GT:   { name: 'Gujarat Titans',              short: 'GT',   color: '#1B2133', elo: 81 }
 };
+
+/**
+ * Deterministic pre-match win probability based on Team ELO ratings
+ */
+function getPreMatchProbabilities(t1Code, t2Code) {
+    const elo1 = IPL_TEAMS[t1Code]?.elo || 80;
+    const elo2 = IPL_TEAMS[t2Code]?.elo || 80;
+    const total = elo1 + elo2;
+    
+    // Add a slight deterministic randomized sway (-2% to +2%) based on match pair hash
+    const sway = ((t1Code.charCodeAt(0) + t2Code.charCodeAt(0)) % 5) - 2; 
+    
+    let prob1 = ((elo1 / total) * 100) + sway;
+    let prob2 = 100 - prob1;
+    
+    return { t1: prob1, t2: prob2 };
+}
 
 const TEAM_KEYS = Object.keys(IPL_TEAMS);
 
@@ -514,19 +531,56 @@ async function getActiveMatches() {
             if (detail) liveDetailed.push(detail);
         }
 
-        // 4. Also scrape any match that schedule says upcoming but might
-        //    have just started (schedule cache can be stale)
-        //    Check the most recent upcoming match too
+        // 4. Pre-Match Betting Fallback
+        //    If there are no live games, the next upcoming match becomes available for betting.
         if (liveDetailed.length === 0 && upcomingSch.length > 0) {
             const nextMatch = upcomingSch[0];
             const detail = await scrapeMatchDetail(nextMatch.cricbuzzId);
+            
             if (detail && detail.status === 'live') {
                 liveDetailed.push(detail);
+            } else {
+                // If detail exists but is 'upcoming', or if it failed to scrape (commentary uninitialized)
+                // We mock/override the detail to force pre-match betting open!
+                const preMatch = detail || {
+                    id: `cb_${nextMatch.cricbuzzId}`,
+                    cricbuzzId: nextMatch.cricbuzzId,
+                    team1: nextMatch.team1, team2: nextMatch.team2,
+                    team1Name: IPL_TEAMS[nextMatch.team1]?.name || nextMatch.team1,
+                    team2Name: IPL_TEAMS[nextMatch.team2]?.name || nextMatch.team2,
+                    team1Score: 0, team1Wickets: 0, team1Overs: 0,
+                    team2Score: 0, team2Wickets: 0, team2Overs: 0,
+                    innings: 1, target: 0, chasingTeam: null,
+                    t1WinProb: 0, t2WinProb: 0,
+                    status: 'upcoming',
+                    venue: '', winner: null,
+                    date: new Date().toISOString()
+                };
+                
+                // Set deterministic pre-match odds utilizing calculated Win Probabilities
+                const { t1: prob1, t2: prob2 } = getPreMatchProbabilities(nextMatch.team1, nextMatch.team2);
+                
+                preMatch.t1WinProb = prob1;
+                preMatch.t2WinProb = prob2;
+                
+                preMatch.status = 'upcoming';
+                preMatch.statusText = `Win Probability: ${nextMatch.team1} ${prob1.toFixed(0)}%, ${nextMatch.team2} ${prob2.toFixed(0)}%`;
+                preMatch.is_betting_open = true;
+                
+                // Calculate dynamic payout odds for the pre-match using the existing engine
+                const tempOdds = calculateOdds({ t1WinProb: prob1, t2WinProb: prob2 });
+                preMatch.team1Odds = tempOdds.team1Odds;
+                preMatch.team2Odds = tempOdds.team2Odds;
+                
+                liveDetailed.push(preMatch);
             }
         }
 
         // 5. Build upcoming list (enrich with team data)
-        const upcoming = upcomingSch.slice(0, 8).map(m => {
+        const upcomingFiltered = upcomingSch.filter(
+            m => !liveDetailed.some(ld => ld.cricbuzzId === m.cricbuzzId)
+        );
+        const upcoming = upcomingFiltered.slice(0, 8).map(m => {
             const d = new Date();
             if (m.matchNumber > 0) {
                 const diff = m.matchNumber - 14;
