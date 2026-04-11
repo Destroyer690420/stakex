@@ -131,7 +131,8 @@ function initIPLLive(io) {
         }
     }
 
-    // Initial check + re-check every 60 seconds
+    // Initial settlement check + loop scheduler
+    scrapeAndBroadcast(); 
     checkSchedule();
     checkInterval = setInterval(checkSchedule, 60 * 1000);
 

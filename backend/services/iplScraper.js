@@ -635,7 +635,7 @@ function shouldScrapeNow() {
     const utcM = now.getUTCMinutes();
     const istMins = (utcH * 60 + utcM) + 330; // IST = UTC+5:30
     const istHour = Math.floor((istMins % 1440) / 60);
-    return istHour >= 14 && istHour <= 23;
+    return istHour >= 14 || istHour < 3;
 }
 
 module.exports = {
