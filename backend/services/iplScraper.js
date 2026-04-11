@@ -58,7 +58,7 @@ const HEADERS = {
 // ============================================
 let cachedSchedule = [];
 let scheduleLastFetched = 0;
-const SCHEDULE_TTL = 30 * 60 * 1000; // 30 minutes
+const SCHEDULE_TTL = 5 * 60 * 1000;  // 5 minutes – faster live transition detection
 
 // ============================================
 // ODDS CALCULATION ENGINE
@@ -345,7 +345,10 @@ async function scrapeMatchDetail(cricbuzzId, forceCompleted = false) {
         }
 
         let isDone = forceCompleted || /won|tied|match ended|no result/i.test(statusTxt);
-        const isLive = !isDone && (s1.runs > 0 || /need|require|batting|live|opt|elected/i.test(statusTxt));
+        // A match is live if ANY team has scored OR status/description text indicates active play
+        const hasAnyScores = s1.runs > 0 || s2.runs > 0;
+        const liveTextPattern = /need|require|batting|live|opt to|elected|trail|lead|follow|crr|rrr|target|over|bowl|chose|won the toss|innings break/i;
+        const isLive = !isDone && (hasAnyScores || liveTextPattern.test(statusTxt) || liveTextPattern.test(ogDesc));
 
         let innings = 1, tgt = 0;
         let chasingTeam = null; // 1 or 2
@@ -373,12 +376,18 @@ async function scrapeMatchDetail(cricbuzzId, forceCompleted = false) {
         }
         if (!chasingTeam && innings === 2) chasingTeam = 2; // fallback
 
+        // Use the ACTIVE innings overs for betting cutoff calculations
+        // (must reflect the team currently batting, not the first score parsed)
         let currentOvers = 0;
-        if (parsedScores.length > 0) {
-            currentOvers = parsedScores[0].overs;
-        } else {
-            currentOvers = Math.min(s1.overs || 0, s2.overs || 0);
-            if (currentOvers === 0 || currentOvers === 20) currentOvers = Math.max(s1.overs || 0, s2.overs || 0); // fallback
+        if (innings === 2 && chasingTeam) {
+            // 2nd innings: use the chasing team's overs (they are currently batting)
+            currentOvers = chasingTeam === 1 ? (s1.overs || 0) : (s2.overs || 0);
+        } else if (s1.overs > 0 || s2.overs > 0) {
+            // 1st innings: use whichever team is currently batting
+            currentOvers = Math.max(s1.overs || 0, s2.overs || 0);
+        } else if (parsedScores.length > 0) {
+            // Fallback: highest overs from any parsed score
+            currentOvers = Math.max(...parsedScores.map(ps => ps.overs || 0));
         }
 
         // --- 6.1 Logical Check for Match End (if text hasn't updated) ---
@@ -531,48 +540,99 @@ async function getActiveMatches() {
             if (detail) liveDetailed.push(detail);
         }
 
-        // 4. Pre-Match Betting Fallback
-        //    If there are no live games, the next upcoming match becomes available for betting.
-        if (liveDetailed.length === 0 && upcomingSch.length > 0) {
+        // 4. Upcoming-to-Live Detection + Pre-Match Betting Fallback
+        //    Always check the first upcoming match – it may have transitioned
+        //    to live since the schedule cache was last refreshed.
+        if (upcomingSch.length > 0) {
             const nextMatch = upcomingSch[0];
-            const detail = await scrapeMatchDetail(nextMatch.cricbuzzId);
-            
-            if (detail && detail.status === 'live') {
-                liveDetailed.push(detail);
-            } else {
-                // If detail exists but is 'upcoming', or if it failed to scrape (commentary uninitialized)
-                // We mock/override the detail to force pre-match betting open!
-                const preMatch = detail || {
-                    id: `cb_${nextMatch.cricbuzzId}`,
-                    cricbuzzId: nextMatch.cricbuzzId,
-                    team1: nextMatch.team1, team2: nextMatch.team2,
-                    team1Name: IPL_TEAMS[nextMatch.team1]?.name || nextMatch.team1,
-                    team2Name: IPL_TEAMS[nextMatch.team2]?.name || nextMatch.team2,
-                    team1Score: 0, team1Wickets: 0, team1Overs: 0,
-                    team2Score: 0, team2Wickets: 0, team2Overs: 0,
-                    innings: 1, target: 0, chasingTeam: null,
-                    t1WinProb: 0, t2WinProb: 0,
-                    status: 'upcoming',
-                    venue: '', winner: null,
-                    date: new Date().toISOString()
-                };
-                
-                // Set deterministic pre-match odds utilizing calculated Win Probabilities
-                const { t1: prob1, t2: prob2 } = getPreMatchProbabilities(nextMatch.team1, nextMatch.team2);
-                
-                preMatch.t1WinProb = prob1;
-                preMatch.t2WinProb = prob2;
-                
-                preMatch.status = 'upcoming';
-                preMatch.statusText = `Win Probability: ${nextMatch.team1} ${prob1.toFixed(0)}%, ${nextMatch.team2} ${prob2.toFixed(0)}%`;
-                preMatch.is_betting_open = true;
-                
-                // Calculate dynamic payout odds for the pre-match using the existing engine
-                const tempOdds = calculateOdds({ t1WinProb: prob1, t2WinProb: prob2 });
-                preMatch.team1Odds = tempOdds.team1Odds;
-                preMatch.team2Odds = tempOdds.team2Odds;
-                
-                liveDetailed.push(preMatch);
+
+            // Only scrape if we haven't already processed this match as live
+            if (!liveDetailed.some(ld => ld.cricbuzzId === nextMatch.cricbuzzId)) {
+                let detail = null;
+                try {
+                    detail = await scrapeMatchDetail(nextMatch.cricbuzzId);
+                } catch (scrapeErr) {
+                    console.error('[IPL Scraper] Error scraping upcoming match for live check:', scrapeErr.message);
+                }
+
+                if (detail) {
+                    // Determine if the match is actually live despite schedule saying "upcoming".
+                    // Check: scraper detected live, OR it has real scores and isn't completed/with-winner
+                    const isActuallyLive = detail.status === 'live' ||
+                        (detail.status !== 'completed' && !detail.winner &&
+                         (detail.team1Score > 0 || detail.team2Score > 0));
+
+                    if (isActuallyLive) {
+                        // ⚡ Match has gone live – force correct status and recalculate betting
+                        detail.status = 'live';
+                        if (!detail.is_betting_open) {
+                            // Recalculate betting status using active innings overs
+                            const activeOvers = (detail.innings === 2 && detail.chasingTeam)
+                                ? (detail.chasingTeam === 1 ? (detail.team1Overs || 0) : (detail.team2Overs || 0))
+                                : Math.max(detail.team1Overs || 0, detail.team2Overs || 0);
+                            detail.is_betting_open = activeOvers <= 18.5;
+                        }
+                        scheduleLastFetched = 0; // Invalidate stale schedule cache
+                        liveDetailed.push(detail);
+                        console.log(`[IPL Scraper] ⚡ Upcoming match ${nextMatch.cricbuzzId} is actually LIVE – promoted`);
+
+                    } else if (detail.status === 'completed') {
+                        // Match already completed – invalidate cache so next poll picks it up properly
+                        scheduleLastFetched = 0;
+                        console.log(`[IPL Scraper] Upcoming match ${nextMatch.cricbuzzId} already COMPLETED`);
+
+                    } else if (liveDetailed.length === 0) {
+                        // Match is genuinely upcoming – show pre-match betting
+                        const preMatch = detail;
+
+                        const { t1: prob1, t2: prob2 } = getPreMatchProbabilities(
+                            nextMatch.team1, nextMatch.team2
+                        );
+
+                        preMatch.t1WinProb = prob1;
+                        preMatch.t2WinProb = prob2;
+                        preMatch.status = 'upcoming';
+                        preMatch.statusText = `Win Probability: ${nextMatch.team1} ${prob1.toFixed(0)}%, ${nextMatch.team2} ${prob2.toFixed(0)}%`;
+                        preMatch.is_betting_open = true;
+
+                        const tempOdds = calculateOdds({ t1WinProb: prob1, t2WinProb: prob2 });
+                        preMatch.team1Odds = tempOdds.team1Odds;
+                        preMatch.team2Odds = tempOdds.team2Odds;
+
+                        liveDetailed.push(preMatch);
+                    }
+                } else if (liveDetailed.length === 0) {
+                    // Scrape failed – create a minimal pre-match entry from schedule data
+                    const preMatch = {
+                        id: `cb_${nextMatch.cricbuzzId}`,
+                        cricbuzzId: nextMatch.cricbuzzId,
+                        team1: nextMatch.team1, team2: nextMatch.team2,
+                        team1Name: IPL_TEAMS[nextMatch.team1]?.name || nextMatch.team1,
+                        team2Name: IPL_TEAMS[nextMatch.team2]?.name || nextMatch.team2,
+                        team1Score: 0, team1Wickets: 0, team1Overs: 0,
+                        team2Score: 0, team2Wickets: 0, team2Overs: 0,
+                        innings: 1, target: 0, chasingTeam: null,
+                        t1WinProb: 0, t2WinProb: 0,
+                        status: 'upcoming',
+                        venue: '', winner: null,
+                        date: new Date().toISOString()
+                    };
+
+                    const { t1: prob1, t2: prob2 } = getPreMatchProbabilities(
+                        nextMatch.team1, nextMatch.team2
+                    );
+
+                    preMatch.t1WinProb = prob1;
+                    preMatch.t2WinProb = prob2;
+                    preMatch.statusText = `Win Probability: ${nextMatch.team1} ${prob1.toFixed(0)}%, ${nextMatch.team2} ${prob2.toFixed(0)}%`;
+                    preMatch.is_betting_open = true;
+
+                    const tempOdds = calculateOdds({ t1WinProb: prob1, t2WinProb: prob2 });
+                    preMatch.team1Odds = tempOdds.team1Odds;
+                    preMatch.team2Odds = tempOdds.team2Odds;
+
+                    liveDetailed.push(preMatch);
+                }
             }
         }
 
@@ -585,7 +645,7 @@ async function getActiveMatches() {
             if (m.matchNumber > 0) {
                 const diff = m.matchNumber - 14;
                 d.setDate(d.getDate() + Math.max(0, diff));
-                d.setHours(19, 30, 0, 0); // Approx 7:30 PM IST
+                d.setUTCHours(14, 0, 0, 0); // 7:30 PM IST = 14:00 UTC
             }
             return {
                 id: `cb_${m.cricbuzzId}`,
